@@ -12,9 +12,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
-import { BlurView } from '@react-native-community/blur';
 import { Colors, Fonts } from '@/constants/tokens';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -67,11 +65,7 @@ export function BottomSheet({
         pointerEvents="auto"
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        {Platform.OS === 'ios' ? (
-          <BlurView style={StyleSheet.absoluteFill} blurType="dark" blurAmount={20} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
-        )}
+        <View style={[StyleSheet.absoluteFill, styles.backdropFill]} />
       </Animated.View>
       <Animated.View style={[styles.sheet, sheetStyle]}>
         {showHandle && <View style={styles.handle} />}
@@ -93,6 +87,9 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
+  },
+  backdropFill: {
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
   sheet: {
     position: 'absolute',
