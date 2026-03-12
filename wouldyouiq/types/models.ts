@@ -18,6 +18,7 @@ export type BudgetItem = {
   amountMonthly: number;
   type: 'essential' | 'flex';
   essential: boolean;
+  elo: number;
 };
 
 export type UserProfile = {

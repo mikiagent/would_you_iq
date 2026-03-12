@@ -5,9 +5,19 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Unbounded_900Black,
+} from '@expo-google-fonts/unbounded';
+import {
+  Figtree_400Regular,
+  Figtree_600SemiBold,
+  Figtree_800ExtraBold,
+} from '@expo-google-fonts/figtree';
 
 import { useUserStore } from '@/stores/userStore';
 import { Colors } from '@/constants/tokens';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { SyncManager } from '@/components/SyncManager';
 import OnboardingScreen from './onboarding';
 import { MilestoneToast } from '@/components/MilestoneToast';
 
@@ -21,7 +31,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    Unbounded_900Black,
+    Figtree_400Regular,
+    Figtree_600SemiBold,
+    Figtree_800ExtraBold,
   });
   const [webReady, setWebReady] = useState(false);
 
@@ -57,7 +70,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={[styles.flex1, styles.fullScreen]}>
-      <RootLayoutNav />
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }
@@ -70,11 +85,14 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      <MilestoneToast />
-    </Stack>
+    <>
+      <SyncManager />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <MilestoneToast />
+      </Stack>
+    </>
   );
 }
 

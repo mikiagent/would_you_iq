@@ -17,6 +17,7 @@ interface TaskStore {
   toggleEssential: (id: string) => void;
   applyEloUpdate: (winnerId: string, loserId: string) => void;
   markDone: (id: string) => void;
+  undoDone: (id: string) => void;
   getPairPool: () => Task[];
   getSortedTasks: (activeOnly?: boolean) => Task[];
 }
@@ -86,6 +87,13 @@ export const useTaskStore = create<TaskStore>()(
         set((s) => ({
           tasks: s.tasks.map((t) =>
             t.id === id ? { ...t, done: true } : t
+          ),
+        })),
+
+      undoDone: (id) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === id ? { ...t, done: false } : t
           ),
         })),
 

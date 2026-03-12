@@ -48,6 +48,10 @@ export function CompletionOverlay({
     transform: [{ scale: scale.value }],
   }));
 
+  const handleKeepGoing = () => {
+    onClose();
+  };
+
   const handleSeePriorities = () => {
     onClose();
     router.push('/(tabs)/fy');
@@ -66,20 +70,32 @@ export function CompletionOverlay({
       <Animated.View style={[styles.overlay, backdropStyle]} pointerEvents="box-none">
         <Animated.View style={[styles.card, cardStyle]} entering={FadeIn.delay(100)}>
           <Text style={styles.badge}>🎯</Text>
-          <Text style={styles.title}>Calibration complete!</Text>
-          <Text style={styles.subtitle}>Your priorities are updated.</Text>
+          <Text style={styles.title}>Priorities Updated!</Text>
+          <Text style={styles.subtitle}>Your choices are shaping your future ✨</Text>
           <View style={styles.xpPill}>
-            <Text style={styles.xpText}>+{xpEarned} XP</Text>
+            <Text style={styles.xpEmoji}>⚡</Text>
+            <View>
+              <Text style={styles.xpText}>+{xpEarned} XP</Text>
+              <Text style={styles.xpSub}>Earned today</Text>
+            </View>
           </View>
           {streak > 0 && (
             <View style={styles.streakCard}>
               <Text style={styles.streakEmoji}>🔥</Text>
-              <Text style={styles.streakText}>{streak} day streak</Text>
+              <View>
+                <Text style={styles.streakText}>{streak} Day Streak!</Text>
+                <Text style={styles.streakSub}>Come back tomorrow to keep it going</Text>
+              </View>
             </View>
           )}
-          <Pressable style={styles.cta} onPress={handleSeePriorities}>
-            <Text style={styles.ctaText}>See My Priorities →</Text>
-          </Pressable>
+          <View style={styles.ctaRow}>
+            <Pressable style={[styles.cta, styles.ctaPrimary]} onPress={handleKeepGoing}>
+              <Text style={styles.ctaPrimaryText}>Keep Swiping ⚡</Text>
+            </Pressable>
+            <Pressable style={[styles.cta, styles.ctaSecondary]} onPress={handleSeePriorities}>
+              <Text style={styles.ctaSecondaryText}>My Priorities →</Text>
+            </Pressable>
+          </View>
         </Animated.View>
       </Animated.View>
     </>
@@ -109,64 +125,107 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   badge: {
-    fontSize: 48,
-    marginBottom: 12,
+    fontSize: 72,
+    marginBottom: 14,
   },
   title: {
     fontFamily: Fonts.display,
-    fontSize: 22,
+    fontWeight: '900',
+    fontSize: 26,
     color: Colors.t1,
-    marginBottom: 6,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: Fonts.bodyLight,
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.t2,
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
   xpPill: {
-    backgroundColor: Colors.violet + '40',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245,200,66,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245,200,66,0.28)',
+    paddingVertical: 13,
+    paddingHorizontal: 26,
+    borderRadius: 20,
+    marginBottom: 14,
+    gap: 11,
+  },
+  xpEmoji: {
+    fontSize: 26,
   },
   xpText: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 24,
+    color: Colors.gold,
+  },
+  xpSub: {
+    fontSize: 10,
     fontFamily: Fonts.bodyBold,
-    fontSize: 18,
-    color: Colors.violet,
+    color: Colors.t2,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   streakCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.s2,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 8,
+    backgroundColor: 'rgba(255,159,67,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,159,67,0.22)',
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    marginBottom: 22,
+    gap: 10,
   },
   streakEmoji: {
-    fontSize: 24,
+    fontSize: 22,
   },
   streakText: {
-    fontFamily: Fonts.body,
-    fontSize: 16,
-    color: Colors.gold,
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.gold2,
+  },
+  streakSub: {
+    fontSize: 10,
+    color: Colors.t3,
+    marginTop: 1,
+  },
+  ctaRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+    maxWidth: 300,
   },
   cta: {
-    backgroundColor: Colors.violet,
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    width: '100%',
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 18,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  ctaText: {
+  ctaPrimary: {
+    backgroundColor: Colors.violet,
+  },
+  ctaPrimaryText: {
     fontFamily: Fonts.bodyBold,
-    fontSize: 16,
-    color: Colors.bg,
+    fontSize: 13,
+    color: '#fff',
+  },
+  ctaSecondary: {
+    backgroundColor: Colors.s2,
+    borderWidth: 1.5,
+    borderColor: Colors.b2,
+  },
+  ctaSecondaryText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+    color: Colors.t2,
   },
 });

@@ -7,6 +7,8 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useBudgetStore } from '@/stores/budgetStore';
 import type { BudgetItem } from '@/types/models';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -16,7 +18,11 @@ import { BudgetItemRow } from '@/components/budget/BudgetItemRow';
 import { AddExpenseSheet } from '@/components/budget/AddExpenseSheet';
 import { BottomSheet } from '@/components/ui';
 
+type BudgetSubTab = 'overview' | 'insights';
+
 export default function BudgetScreen() {
+  const insets = useSafeAreaInsets();
+  const paddingTop = Math.max(insets.top, 44);
   const {
     income,
     items,
@@ -30,6 +36,7 @@ export default function BudgetScreen() {
     addItem,
   } = useBudgetStore();
 
+  const [subTab, setSubTab] = useState<BudgetSubTab>('overview');
   const [incomeSheetVisible, setIncomeSheetVisible] = useState(false);
   const [incomeInput, setIncomeInput] = useState('');
   const [expenseSheetVisible, setExpenseSheetVisible] = useState(false);
@@ -83,22 +90,43 @@ export default function BudgetScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>💰 Budget</Text>
+      <View style={[styles.header, { paddingTop }]}>
+        <Text style={styles.title}>Budget 💰</Text>
       </View>
+      <View style={styles.subTabs}>
+        <Pressable
+          style={[styles.stBtn, subTab === 'overview' && styles.stBtnOn]}
+          onPress={() => setSubTab('overview')}
+        >
+          <Text style={[styles.stBtnText, subTab === 'overview' && styles.stBtnTextOn]}>
+            📊 Overview
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.stBtn, subTab === 'insights' && styles.stBtnOn]}
+          onPress={() => setSubTab('insights')}
+        >
+          <Text style={[styles.stBtnText, subTab === 'insights' && styles.stBtnTextOn]}>
+            💡 Insights
+          </Text>
+        </Pressable>
+      </View>
+      {subTab === 'overview' ? (
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.incomeRow}>
-          <Text style={styles.incomeLabel}>Monthly income</Text>
-          <Pressable onPress={openIncomeEdit} style={styles.incomeValue}>
+          <Text style={styles.incomeLabel}>MONTHLY INCOME</Text>
+          <View style={styles.incomeValueRow}>
             <Text style={styles.incomeText}>
               ${(income || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </Text>
-            <Text style={styles.editLink}>Edit</Text>
-          </Pressable>
+            <Pressable onPress={openIncomeEdit}>
+              <Text style={styles.editLink}>Edit</Text>
+            </Pressable>
+          </View>
         </View>
         <LeftoverCard amount={leftover} />
         <View style={styles.chartRow}>
@@ -178,14 +206,36 @@ export default function BudgetScreen() {
           <Text style={styles.emptyText}>No expenses yet. Tap + to add.</Text>
         )}
       </ScrollView>
+      ) : (
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.insightsContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.insightHero}>
+            <Text style={styles.insightHeroText}>Priority alignment</Text>
+            <Text style={styles.insightHeroValue}>{alignment}%</Text>
+          </View>
+          {income > 0 && (
+            <Text style={styles.insightBody}>
+              {alignment >= 70
+                ? 'Your spending aligns well with your task priorities.'
+                : 'Consider aligning your flexible spending with your top priorities.'}
+            </Text>
+          )}
+        </ScrollView>
+      )}
       <Pressable
-        style={styles.fab}
+        style={styles.fabWrap}
         onPress={() => {
           setEditingItem(null);
           setExpenseSheetVisible(true);
         }}
       >
-        <Text style={styles.fabText}>+</Text>
+        <LinearGradient
+          colors={[Colors.v2, Colors.violet]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fab}
+        >
+          <Text style={styles.fabText}>＋</Text>
+        </LinearGradient>
       </Pressable>
       <BottomSheet
         visible={incomeSheetVisible}
@@ -231,38 +281,99 @@ export default function BudgetScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   header: {
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 10,
   },
   title: {
     fontFamily: Fonts.display,
-    fontSize: 26,
+    fontWeight: '900',
+    fontSize: 22,
     color: Colors.t1,
   },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  incomeRow: {
+  subTabs: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: Colors.s2,
+    borderRadius: 16,
+    padding: 3,
+    gap: 2,
+    marginHorizontal: 18,
+    marginBottom: 14,
+  },
+  stBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  stBtnOn: {
+    backgroundColor: Colors.s1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  stBtnText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 12,
+    color: Colors.t3,
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  stBtnTextOn: { color: Colors.t1 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 18, paddingBottom: 100 },
+  insightsContent: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 100 },
+  incomeRow: {
+    marginBottom: 14,
   },
   incomeLabel: {
-    fontFamily: Fonts.body,
-    fontSize: 15,
-    color: Colors.t2,
-  },
-  incomeValue: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  incomeText: {
+    fontSize: 10,
     fontFamily: Fonts.bodyBold,
-    fontSize: 18,
+    letterSpacing: 2,
+    color: Colors.t3,
+    marginBottom: 4,
+  },
+  incomeValueRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  incomeText: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 28,
     color: Colors.t1,
   },
   editLink: {
-    fontFamily: Fonts.body,
-    fontSize: 14,
+    fontSize: 11,
     color: Colors.violet,
+    fontFamily: Fonts.bodyBold,
+    opacity: 0.75,
+  },
+  insightHero: {
+    backgroundColor: 'rgba(167,139,250,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.18)',
+    borderRadius: 22,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 16,
+  },
+  insightHeroText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.t1,
+  },
+  insightHeroValue: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 24,
+    color: Colors.violet,
+  },
+  insightBody: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 13,
+    color: Colors.t2,
+    lineHeight: 22,
   },
   chartRow: {
     flexDirection: 'row',
@@ -325,23 +436,25 @@ const styles = StyleSheet.create({
     color: Colors.t3,
     marginTop: 12,
   },
-  fab: {
+  fabWrap: {
     position: 'absolute',
-    bottom: 24,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.violet,
+    bottom: 64 + 16,
+    right: 18,
+    zIndex: 50,
+  },
+  fab: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowColor: Colors.violet,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 22,
+    elevation: 8,
   },
-  fabText: { fontSize: 28, color: Colors.bg, fontWeight: '600' },
+  fabText: { fontSize: 22, color: '#fff', fontFamily: Fonts.bodyBold },
   sheetLabel: {
     fontFamily: Fonts.body,
     fontSize: 14,

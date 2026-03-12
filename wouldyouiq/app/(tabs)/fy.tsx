@@ -6,11 +6,11 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -19,7 +19,6 @@ import { useTaskStore } from '@/stores/taskStore';
 import { useUserStore } from '@/stores/userStore';
 import type { Task } from '@/types/models';
 import { Colors, Fonts } from '@/constants/tokens';
-import { Badge } from '@/components/ui';
 import { ConfettiCannon } from '@/components/Confetti';
 
 const { height: H } = Dimensions.get('window');
@@ -27,6 +26,8 @@ const SKIP_THRESHOLD = -80;
 const TASK_DONE_XP = 30;
 
 export default function ForYouScreen() {
+  const insets = useSafeAreaInsets();
+  const paddingTop = Math.max(insets.top, 44);
   const { addXP, incrementTasksDone } = useUserStore();
   const { getSortedTasks, markDone } = useTaskStore();
   const [index, setIndex] = useState(0);
@@ -104,19 +105,18 @@ export default function ForYouScreen() {
       )}
       <ConfettiCannon visible={showConfetti} particleCount={50} />
       <View style={[styles.glow, { backgroundColor: urgencyGlow }]} />
+      <View style={[styles.rankRow, { top: paddingTop }]}>
+        <Text style={styles.rankLbl}>For You</Text>
+        <View style={styles.eloTag}>
+          <Text style={styles.eloTagText}>{currentTask?.elo ?? 0} ELO</Text>
+        </View>
+      </View>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.cardWrap, cardStyle]}>
           <View style={[styles.card, { backgroundColor: Colors.s1 }]}>
-            <View style={styles.rankBar}>
-              <Text style={styles.rankText}>
-                #{index + 1} Priority
-                {currentTask?.essential ? ' ⭐' : ''}
-              </Text>
-              <Badge label={`${currentTask?.elo ?? 0} ELO`} variant="violet" />
-            </View>
-            {currentTask?.deadline === 'today' && (
-              <View style={styles.urgencyBadge}>
-                <Text style={styles.urgencyText}>🔥 Due today</Text>
+            {currentTask?.urgency === 'high' && (
+              <View style={styles.urgBadge}>
+                <Text style={styles.urgBadgeText}>URGENT</Text>
               </View>
             )}
             <Text style={styles.emoji}>{currentTask?.emoji}</Text>
@@ -124,18 +124,23 @@ export default function ForYouScreen() {
             {currentTask?.timeEstimate ? (
               <Text style={styles.timeEst}>{currentTask.timeEstimate}</Text>
             ) : null}
+            {currentTask?.deadline && (
+              <Text style={styles.dlText}>
+                {currentTask.deadline === 'today' ? 'Due today' : 'Due this week'}
+              </Text>
+            )}
           </View>
         </Animated.View>
       </GestureDetector>
       <View style={styles.actions}>
-        <Pressable style={styles.skipBtn} onPress={handleSkip}>
-          <Text style={styles.skipText}>⏭ Skip</Text>
-        </Pressable>
         <Pressable style={styles.doneBtn} onPress={handleDone}>
-          <Text style={styles.doneText}>✅ Done</Text>
+          <Text style={styles.doneBtnText}>Done</Text>
+        </Pressable>
+        <Pressable style={styles.skipBtn} onPress={handleSkip}>
+          <Text style={styles.skipBtnText}>Skip</Text>
         </Pressable>
       </View>
-      <Text style={styles.hint}>Swipe up to skip to next</Text>
+      <Text style={styles.tip}>↑ Swipe up to skip</Text>
     </View>
   );
 }
@@ -152,99 +157,135 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(52,211,153,0.25)',
     zIndex: 100,
   },
+  rankRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  rankLbl: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 13,
+    color: Colors.violet,
+  },
+  eloTag: {
+    backgroundColor: Colors.s2,
+    borderWidth: 1,
+    borderColor: Colors.b2,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  eloTagText: {
+    fontSize: 11,
+    fontFamily: Fonts.bodyBold,
+    color: Colors.t3,
+  },
   cardWrap: {
     flex: 1,
-    padding: 24,
-    paddingTop: 80,
+    padding: 20,
+    paddingTop: 60,
   },
   card: {
     flex: 1,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.s2,
-    padding: 28,
+    paddingVertical: 20,
+    paddingHorizontal: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  rankBar: {
-    position: 'absolute',
-    top: 20,
-    left: 24,
-    right: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rankText: {
-    fontFamily: Fonts.body,
-    fontSize: 14,
-    color: Colors.t2,
-  },
-  urgencyBadge: {
-    position: 'absolute',
-    top: 20,
-    alignSelf: 'center',
-    backgroundColor: Colors.red + '30',
-    paddingHorizontal: 12,
+  urgBadge: {
+    backgroundColor: 'rgba(248,113,113,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.28)',
     paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginBottom: 14,
   },
-  urgencyText: {
+  urgBadgeText: {
+    fontSize: 11,
     fontFamily: Fonts.bodyBold,
-    fontSize: 12,
+    letterSpacing: 0.5,
     color: Colors.red,
   },
   emoji: {
-    fontSize: 72,
-    marginBottom: 16,
+    fontSize: 84,
+    marginBottom: 14,
   },
   name: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 24,
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 25,
     color: Colors.t1,
     textAlign: 'center',
     marginBottom: 8,
+    lineHeight: 28,
   },
   timeEst: {
-    fontFamily: Fonts.bodyLight,
     fontSize: 14,
     color: Colors.t2,
+    marginBottom: 6,
+  },
+  dlText: {
+    fontSize: 12,
+    fontFamily: Fonts.bodyBold,
+    color: Colors.gold,
+    marginBottom: 16,
   },
   actions: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 24,
     justifyContent: 'center',
   },
-  skipBtn: {
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    backgroundColor: Colors.s2,
+  doneBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 18,
+    backgroundColor: Colors.green2,
+    minWidth: 120,
+    alignItems: 'center',
   },
-  skipText: {
-    fontFamily: Fonts.body,
-    fontSize: 16,
+  doneBtnText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+    color: '#042b1e',
+  },
+  skipBtn: {
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 18,
+    backgroundColor: Colors.s2,
+    borderWidth: 1,
+    borderColor: Colors.b2,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  skipBtnText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
     color: Colors.t2,
   },
-  doneBtn: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: Colors.green,
-  },
-  doneText: {
+  tip: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
     fontFamily: Fonts.bodyBold,
-    fontSize: 16,
-    color: Colors.bg,
-  },
-  hint: {
-    fontFamily: Fonts.bodyLight,
-    fontSize: 12,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: Colors.t3,
     textAlign: 'center',
-    paddingBottom: 24,
   },
   empty: {
     flex: 1,

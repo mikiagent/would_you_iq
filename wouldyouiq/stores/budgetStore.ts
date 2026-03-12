@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { BudgetItem } from '@/types/models';
+import { eloUpdate } from '@/utils/elo';
 import { useTaskStore } from './taskStore';
 import { mmkvStorage } from './storage';
 
@@ -8,14 +9,18 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+const defaultElo = 1200;
+
 interface BudgetStore {
   income: number;
   items: BudgetItem[];
   setIncome: (amount: number) => void;
-  addItem: (item: Omit<BudgetItem, 'id'>) => void;
+  addItem: (item: Omit<BudgetItem, 'id' | 'elo'>) => void;
   updateItem: (id: string, updates: Partial<BudgetItem>) => void;
   deleteItem: (id: string) => void;
   toggleEssential: (id: string) => void;
+  applyEloUpdate: (winnerId: string, loserId: string) => void;
+  getPairPool: () => BudgetItem[];
   getTotalSpend: () => number;
   getLeftover: () => number;
   getAlignmentScore: () => number;
@@ -36,9 +41,33 @@ export const useBudgetStore = create<BudgetStore>()(
             {
               ...item,
               id: generateId(),
+              elo: defaultElo,
             } as BudgetItem,
           ],
         })),
+
+      applyEloUpdate: (winnerId, loserId) =>
+        set((s) => {
+          const winner = s.items.find((i) => i.id === winnerId);
+          const loser = s.items.find((i) => i.id === loserId);
+          if (!winner || !loser) return s;
+          const winnerElo = winner.elo ?? defaultElo;
+          const loserElo = loser.elo ?? defaultElo;
+          const { winner: newWinnerElo, loser: newLoserElo } = eloUpdate(
+            winnerElo,
+            loserElo
+          );
+          return {
+            items: s.items.map((i) => {
+              if (i.id === winnerId) return { ...i, elo: newWinnerElo };
+              if (i.id === loserId) return { ...i, elo: newLoserElo };
+              return i;
+            }),
+          };
+        }),
+
+      getPairPool: () =>
+        get().items.filter((i) => !i.essential),
 
       updateItem: (id, updates) =>
         set((s) => ({
