@@ -4,14 +4,18 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  FadeIn,
   withDelay,
+  withSequence,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Colors, Fonts } from '@/constants/tokens';
 import { ConfettiCannon } from '@/components/Confetti';
 
-const { height: H } = Dimensions.get('window');
+const { width: W, height: H } = Dimensions.get('window');
+
+const easeOutBack = Easing.bezier(0.34, 1.2, 0.64, 1);
 
 type CompletionOverlayProps = {
   visible: boolean;
@@ -27,25 +31,98 @@ export function CompletionOverlay({
   onClose,
 }: CompletionOverlayProps) {
   const router = useRouter();
-  const scale = useSharedValue(0);
-  const opacity = useSharedValue(0);
+  const overlayOpacity = useSharedValue(0);
+  const badgeScale = useSharedValue(0);
+  const badgeRotate = useSharedValue(-15);
+  const badgeOpacity = useSharedValue(0);
+  const titleY = useSharedValue(20);
+  const titleO = useSharedValue(0);
+  const subY = useSharedValue(14);
+  const subO = useSharedValue(0);
+  const xpScale = useSharedValue(0.82);
+  const xpO = useSharedValue(0);
+  const streakY = useSharedValue(12);
+  const streakO = useSharedValue(0);
+  const ctaY = useSharedValue(14);
+  const ctaO = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      opacity.value = withSpring(1);
-      scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 150 }));
+      overlayOpacity.value = withTiming(1, { duration: 400 });
+      badgeScale.value = withSequence(
+        withTiming(1.32, { duration: 420, easing: easeOutBack }),
+        withTiming(0.92, { duration: 140 }),
+        withTiming(1, { duration: 140 })
+      );
+      badgeRotate.value = withSequence(
+        withTiming(5, { duration: 420, easing: easeOutBack }),
+        withTiming(-2, { duration: 140 }),
+        withTiming(0, { duration: 140 })
+      );
+      badgeOpacity.value = withTiming(1, { duration: 420 });
+      titleY.value = withDelay(200, withTiming(0, { duration: 550, easing: easeOutBack }));
+      titleO.value = withDelay(200, withTiming(1, { duration: 550 }));
+      subY.value = withDelay(350, withTiming(0, { duration: 550, easing: easeOutBack }));
+      subO.value = withDelay(350, withTiming(1, { duration: 550 }));
+      xpScale.value = withDelay(500, withTiming(1, { duration: 550, easing: easeOutBack }));
+      xpO.value = withDelay(500, withTiming(1, { duration: 550 }));
+      streakY.value = withDelay(650, withTiming(0, { duration: 550, easing: easeOutBack }));
+      streakO.value = withDelay(650, withTiming(1, { duration: 550 }));
+      ctaY.value = withDelay(820, withTiming(0, { duration: 550, easing: easeOutBack }));
+      ctaO.value = withDelay(820, withTiming(1, { duration: 550 }));
     } else {
-      opacity.value = withSpring(0);
-      scale.value = withSpring(0);
+      overlayOpacity.value = withTiming(0, { duration: 300 });
+      badgeScale.value = withTiming(0);
+      badgeRotate.value = withTiming(-15);
+      badgeOpacity.value = withTiming(0);
+      titleY.value = 20;
+      titleO.value = 0;
+      subY.value = 14;
+      subO.value = 0;
+      xpScale.value = 0.82;
+      xpO.value = 0;
+      streakY.value = 12;
+      streakO.value = 0;
+      ctaY.value = 14;
+      ctaO.value = 0;
     }
-  }, [visible, opacity, scale]);
+  }, [visible]);
 
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
+    opacity: overlayOpacity.value,
   }));
 
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+  const badgeStyle = useAnimatedStyle(() => ({
+    opacity: badgeOpacity.value,
+    transform: [
+      { scale: badgeScale.value },
+      { rotate: `${badgeRotate.value}deg` },
+    ],
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: titleO.value,
+    transform: [{ translateY: titleY.value }],
+  }));
+
+  const subtitleStyle = useAnimatedStyle(() => ({
+    opacity: subO.value,
+    transform: [{ translateY: subY.value }],
+  }));
+
+  const xpStyle = useAnimatedStyle(() => ({
+    opacity: xpO.value,
+    transform: [{ scale: xpScale.value }],
+  }));
+
+  const streakStyle = useAnimatedStyle(() => ({
+    opacity: streakO.value,
+    transform: [{ translateY: streakY.value }],
+  }));
+
+  const ctaStyle = useAnimatedStyle(() => ({
+    opacity: ctaO.value,
+    transform: [{ translateY: ctaY.value }],
   }));
 
   const handleKeepGoing = () => {
@@ -65,38 +142,42 @@ export function CompletionOverlay({
       <ConfettiCannon
         visible={visible}
         particleCount={70}
-        origin={{ x: 0, y: H * 0.35 }}
+        origin={{ x: W / 2, y: H * 0.35 }}
       />
       <Animated.View style={[styles.overlay, backdropStyle]} pointerEvents="box-none">
-        <Animated.View style={[styles.card, cardStyle]} entering={FadeIn.delay(100)}>
-          <Text style={styles.badge}>🎯</Text>
-          <Text style={styles.title}>Priorities Updated!</Text>
-          <Text style={styles.subtitle}>Your choices are shaping your future ✨</Text>
-          <View style={styles.xpPill}>
+        <View style={styles.card}>
+          <Animated.View style={[styles.badgeWrap, badgeStyle]}>
+            <Text style={styles.badge}>🎯</Text>
+          </Animated.View>
+          <Animated.Text style={[styles.title, titleStyle]}>Priorities Updated!</Animated.Text>
+          <Animated.Text style={[styles.subtitle, subtitleStyle]}>
+            Your choices are shaping your future ✨
+          </Animated.Text>
+          <Animated.View style={[styles.xpPill, xpStyle]}>
             <Text style={styles.xpEmoji}>⚡</Text>
             <View>
               <Text style={styles.xpText}>+{xpEarned} XP</Text>
               <Text style={styles.xpSub}>Earned today</Text>
             </View>
-          </View>
+          </Animated.View>
           {streak > 0 && (
-            <View style={styles.streakCard}>
+            <Animated.View style={[styles.streakCard, streakStyle]}>
               <Text style={styles.streakEmoji}>🔥</Text>
               <View>
                 <Text style={styles.streakText}>{streak} Day Streak!</Text>
                 <Text style={styles.streakSub}>Come back tomorrow to keep it going</Text>
               </View>
-            </View>
+            </Animated.View>
           )}
-          <View style={styles.ctaRow}>
+          <Animated.View style={[styles.ctaRow, ctaStyle]}>
             <Pressable style={[styles.cta, styles.ctaPrimary]} onPress={handleKeepGoing}>
               <Text style={styles.ctaPrimaryText}>Keep Swiping ⚡</Text>
             </Pressable>
             <Pressable style={[styles.cta, styles.ctaSecondary]} onPress={handleSeePriorities}>
               <Text style={styles.ctaSecondaryText}>My Priorities →</Text>
             </Pressable>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </View>
       </Animated.View>
     </>
   );
@@ -124,9 +205,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 320,
   },
+  badgeWrap: {
+    marginBottom: 14,
+  },
   badge: {
     fontSize: 72,
-    marginBottom: 14,
   },
   title: {
     fontFamily: Fonts.display,

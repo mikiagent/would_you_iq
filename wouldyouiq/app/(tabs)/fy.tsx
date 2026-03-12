@@ -34,12 +34,15 @@ export default function ForYouScreen() {
   const insets = useSafeAreaInsets();
   const paddingTop = Math.max(insets.top, 44);
   const { addXP, incrementTasksDone } = useUserStore();
-  const { getSortedTasks, markDone } = useTaskStore();
+  const tasks = useTaskStore((s) => s.tasks);
+  const getSortedTasks = useTaskStore((s) => s.getSortedTasks);
+  const markDone = useTaskStore((s) => s.markDone);
   const [index, setIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const sorted = useMemo(() => getSortedTasks(true), [getSortedTasks]);
-  const currentTask = sorted[index] ?? null;
+  const sorted = useMemo(() => getSortedTasks(true), [getSortedTasks, tasks]);
+  const safeIndex = sorted.length > 0 ? Math.min(index, sorted.length - 1) : 0;
+  const currentTask = sorted[safeIndex] ?? null;
 
   const translateY = useSharedValue(0);
   const tipBobY = useSharedValue(0);
@@ -64,8 +67,9 @@ export default function ForYouScreen() {
     })
     .onEnd((e) => {
       if (translateY.value < SKIP_THRESHOLD) {
+        const len = sorted.length;
         translateY.value = withSpring(-H, { damping: 20 }, () => {
-          runOnJS(setIndex)((i) => Math.min(i + 1, sorted.length));
+          runOnJS(setIndex)((i) => Math.min(i + 1, Math.max(0, len - 1)));
           translateY.value = 0;
         });
       } else {
@@ -128,7 +132,7 @@ export default function ForYouScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.greenFlash, flashStyle]} pointerEvents="none" />
-      <ConfettiCannon visible={showConfetti} particleCount={50} />
+      <ConfettiCannon visible={showConfetti} particleCount={80} />
       <View style={[styles.glow, { backgroundColor: urgencyGlow }]} />
       <View style={[styles.rankRow, { top: paddingTop }]}>
         <View style={styles.rankLblWrap}>
@@ -235,7 +239,8 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   card: {
-    flex: 1,
+    alignSelf: 'stretch',
+    maxHeight: H * 0.52,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.s2,

@@ -33,19 +33,19 @@ function createParticles(count: number, origin: { x: number; y: number }): Parti
   const out: Particle[] = [];
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-    const speed = 80 + Math.random() * 120;
+    const speed = 120 + Math.random() * 140;
     out.push({
       id: i,
       x: origin.x,
       y: origin.y,
-      size: 8 + Math.random() * 10,
+      size: 10 + Math.random() * 12,
       color: COLORS[Math.floor(Math.random() * COLORS.length)]!,
       shape: SHAPES[Math.floor(Math.random() * SHAPES.length)]!,
       rotation: Math.random() * 360,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 60,
-      delay: Math.random() * 150,
-      duration: 1200 + Math.random() * 600,
+      vy: Math.sin(angle) * speed - 80,
+      delay: Math.random() * 100,
+      duration: 1400 + Math.random() * 600,
     });
   }
   return out;
@@ -134,7 +134,7 @@ export function ConfettiCannon({
   if (!visible || particles.length === 0) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { zIndex: 300 }]} pointerEvents="none">
       {particles.map((p) => (
         <ParticleView key={p.id} p={p} />
       ))}

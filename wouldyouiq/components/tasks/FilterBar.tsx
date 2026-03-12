@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1.5,
@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Fonts.bodyBold,
     fontSize: 12,
+    lineHeight: 16,
     color: Colors.t3,
   },
   labelActive: {
