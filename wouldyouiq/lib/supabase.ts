@@ -24,11 +24,14 @@ const storage = {
   },
 };
 
+/** On web, must be true so OAuth redirect hash (#access_token=...) is parsed and session is restored. */
+const isWeb = typeof window !== 'undefined';
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: isWeb,
   },
 });

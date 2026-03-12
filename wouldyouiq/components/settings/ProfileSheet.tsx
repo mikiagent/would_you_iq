@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Image } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserStore } from '@/stores/userStore';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -30,9 +30,16 @@ export function ProfileSheet({ visible, onClose }: ProfileSheetProps) {
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="" showHandle>
+      <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={12}>
+        <Text style={styles.closeBtnText}>Done</Text>
+      </Pressable>
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarBig}>
-          <Text style={styles.avatarText}>{initials}</Text>
+          {profile.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{initials}</Text>
+          )}
         </View>
         <Text style={styles.name}>{profile.name || 'Friend'}</Text>
         <View style={styles.planBadge}>
@@ -81,6 +88,17 @@ export function ProfileSheet({ visible, onClose }: ProfileSheetProps) {
 }
 
 const styles = StyleSheet.create({
+  closeBtn: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  closeBtnText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.violet,
+  },
   body: {
     maxHeight: 400,
   },
@@ -93,6 +111,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarText: {
     fontFamily: Fonts.display,

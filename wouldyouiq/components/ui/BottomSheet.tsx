@@ -62,10 +62,13 @@ export function BottomSheet({
     <>
       <Animated.View
         style={[styles.backdrop, backdropStyle]}
-        pointerEvents="auto"
+        pointerEvents="box-none"
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={[StyleSheet.absoluteFill, styles.backdropFill]} />
+        <View
+          style={[StyleSheet.absoluteFill, styles.backdropFill]}
+          pointerEvents="none"
+        />
       </Animated.View>
       <Animated.View style={[styles.sheet, sheetStyle]}>
         {showHandle && <View style={styles.handle} />}

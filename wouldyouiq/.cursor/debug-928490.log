@@ -1,0 +1,5 @@
+{"sessionId":"928490","location":"AuthContext.tsx:getSession","message":"getSession resolved","data":{"hasSession":false},"timestamp":1773292595677,"hypothesisId":"H1"}
+{"sessionId":"928490","location":"AuthContext.tsx:onAuthStateChange","message":"onAuthStateChange","data":{"event":"INITIAL_SESSION","hasSession":false},"timestamp":1773292595681,"hypothesisId":"H2"}
+{"sessionId":"928490","location":"AuthContext.tsx:onAuthStateChange","message":"onAuthStateChange","data":{"event":"SIGNED_IN","hasSession":true,"userEmail":"milan.kinzy@gmail.com"},"timestamp":1773292601669,"hypothesisId":"H2"}
+{"sessionId":"928490","location":"AuthContext.tsx:getSession","message":"getSession resolved","data":{"hasSession":true,"userEmail":"milan.kinzy@gmail.com"},"timestamp":1773292601672,"hypothesisId":"H1"}
+{"sessionId":"928490","location":"AuthContext.tsx:onAuthStateChange","message":"onAuthStateChange","data":{"event":"INITIAL_SESSION","hasSession":true,"userEmail":"milan.kinzy@gmail.com"},"timestamp":1773292601672,"hypothesisId":"H2"}

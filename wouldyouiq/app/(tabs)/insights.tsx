@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserStore } from '@/stores/userStore';
@@ -44,7 +44,11 @@ export default function SettingsScreen() {
             style={styles.avatar}
             onPress={() => setProfileSheetVisible(true)}
           >
-            <Text style={styles.avatarText}>{initials}</Text>
+            {profile.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
           </Pressable>
         ) : (
           <Pressable style={styles.signInBtn} onPress={signInWithGoogle}>
@@ -161,6 +165,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(167,139,250,0.35)',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   avatarText: {
     fontFamily: Fonts.display,

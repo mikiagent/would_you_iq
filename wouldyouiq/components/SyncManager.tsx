@@ -7,8 +7,18 @@ import { useBudgetStore } from '@/stores/budgetStore';
 
 const PUSH_DEBOUNCE_MS = 2000;
 
+/** Pull name, avatar, email from Supabase Auth user (e.g. Google). */
+function getAuthProfile(session: { user: { user_metadata?: Record<string, unknown>; email?: string | null } }) {
+  const m = session.user?.user_metadata ?? {};
+  return {
+    name: (m.full_name as string) ?? (m.name as string) ?? '',
+    avatarUrl: (m.avatar_url as string) ?? (m.picture as string) ?? null,
+    email: session.user?.email ?? null,
+  };
+}
+
 /**
- * When user is signed in: hydrate stores from Supabase on mount,
+ * When user is signed in: hydrate stores from Supabase, merge in auth user info so profile updates,
  * then push store changes to Supabase after a debounce.
  */
 export function SyncManager() {
@@ -25,9 +35,15 @@ export function SyncManager() {
 
     if (!hydrated.current) {
       hydrated.current = true;
-      hydrateFromSupabase(userId).catch(() => {
-        hydrated.current = false;
-      });
+      hydrateFromSupabase(userId)
+        .then(() => {
+          const authProfile = getAuthProfile(session);
+          useUserStore.getState().setProfileFromAuth(authProfile);
+          pushToSupabase(userId).catch(() => {});
+        })
+        .catch(() => {
+          hydrated.current = false;
+        });
     }
   }, [session?.user?.id]);
 

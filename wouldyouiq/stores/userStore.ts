@@ -9,6 +9,8 @@ function todayStr(): string {
 
 const defaultProfile: UserProfile = {
   name: '',
+  avatarUrl: null,
+  email: null,
   xp: 0,
   streak: 0,
   streakLastDate: null,
@@ -21,6 +23,8 @@ const defaultProfile: UserProfile = {
 interface UserStore {
   profile: UserProfile;
   setName: (name: string) => void;
+  /** Merge auth user info into profile (e.g. after sign-in); only sets non-empty values. */
+  setProfileFromAuth: (data: { name?: string; avatarUrl?: string | null; email?: string | null }) => void;
   addXP: (amount: number) => void;
   incrementStreak: () => void;
   incrementComparisons: () => void;
@@ -37,6 +41,16 @@ export const useUserStore = create<UserStore>()(
       setName: (name) =>
         set((s) => ({
           profile: { ...s.profile, name },
+        })),
+
+      setProfileFromAuth: (data) =>
+        set((s) => ({
+          profile: {
+            ...s.profile,
+            ...(data.name != null && data.name !== '' && { name: data.name }),
+            ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+            ...(data.email !== undefined && { email: data.email }),
+          },
         })),
 
       addXP: (amount) =>

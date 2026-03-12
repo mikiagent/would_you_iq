@@ -23,6 +23,8 @@ export type BudgetItem = {
 
 export type UserProfile = {
   name: string;
+  avatarUrl: string | null;
+  email: string | null;
   xp: number;
   streak: number;
   streakLastDate: string | null; // YYYY-MM-DD

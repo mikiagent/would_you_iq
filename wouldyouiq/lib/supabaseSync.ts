@@ -21,6 +21,8 @@ export async function hydrateFromSupabase(userId: string): Promise<void> {
     useUserStore.setState({
       profile: {
         name: (p.name as string) ?? '',
+        avatarUrl: (p.avatar_url as string | null) ?? null,
+        email: (p.email as string | null) ?? null,
         xp: (p.xp as number) ?? 0,
         streak: (p.streak as number) ?? 0,
         streakLastDate: (p.streak_last_date as string | null) ?? null,
@@ -80,6 +82,8 @@ export async function pushToSupabase(userId: string): Promise<void> {
     {
       id: userId,
       name: profile.name,
+      avatar_url: profile.avatarUrl ?? null,
+      email: profile.email ?? null,
       xp: profile.xp,
       streak: profile.streak,
       streak_last_date: profile.streakLastDate,
