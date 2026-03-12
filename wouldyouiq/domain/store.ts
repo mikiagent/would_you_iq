@@ -12,11 +12,13 @@ export interface AppState {
     mode: CalibrationMode;
     step: number;
     totalCommits: number;
+    currentTaskId: number | null;
   };
   setMode: (mode: CalibrationMode) => void;
   addComparison: () => void;
   markEssential: (taskId: number) => void;
   completeTaskById: (id: number) => void;
+  pickNextTask: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -27,6 +29,7 @@ export const useAppStore = create<AppState>((set) => ({
     mode: 'tasks',
     step: 0,
     totalCommits: 0,
+    currentTaskId: initialTasks[0]?.id ?? null,
   },
   setMode: (mode) =>
     set((state) => ({
@@ -69,6 +72,22 @@ export const useAppStore = create<AppState>((set) => ({
       return {
         user,
         tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
+      };
+    }),
+  pickNextTask: () =>
+    set((state) => {
+      const remaining = state.tasks.filter((t) => !t.done);
+      if (!remaining.length) {
+        return {
+          calibration: { ...state.calibration, currentTaskId: null },
+        };
+      }
+      const idx = Math.floor(Math.random() * remaining.length);
+      return {
+        calibration: {
+          ...state.calibration,
+          currentTaskId: remaining[idx].id,
+        },
       };
     }),
 }));
