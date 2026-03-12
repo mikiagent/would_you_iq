@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,17 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withTiming,
+  withRepeat,
   runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -32,12 +37,24 @@ export default function ForYouScreen() {
   const { getSortedTasks, markDone } = useTaskStore();
   const [index, setIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [greenFlash, setGreenFlash] = useState(false);
 
   const sorted = useMemo(() => getSortedTasks(true), [getSortedTasks]);
   const currentTask = sorted[index] ?? null;
 
   const translateY = useSharedValue(0);
+  const tipBobY = useSharedValue(0);
+  const flashOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    tipBobY.value = withRepeat(
+      withSequence(
+        withTiming(-6, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, []);
 
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
@@ -60,6 +77,14 @@ export default function ForYouScreen() {
     transform: [{ translateY: translateY.value }],
   }));
 
+  const tipBobStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: tipBobY.value }],
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
+  }));
+
   const handleDone = () => {
     if (!currentTask) return;
     markDone(currentTask.id);
@@ -67,9 +92,11 @@ export default function ForYouScreen() {
     incrementTasksDone();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setShowConfetti(true);
-    setGreenFlash(true);
+    flashOpacity.value = withSequence(
+      withTiming(0.16, { duration: 100 }),
+      withTiming(0, { duration: 500 })
+    );
     setTimeout(() => setShowConfetti(false), 2000);
-    setTimeout(() => setGreenFlash(false), 600);
     setIndex((i) => i);
   };
 
@@ -100,13 +127,21 @@ export default function ForYouScreen() {
 
   return (
     <View style={styles.container}>
-      {greenFlash && (
-        <View style={[StyleSheet.absoluteFill, styles.greenFlash]} />
-      )}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.greenFlash, flashStyle]} pointerEvents="none" />
       <ConfettiCannon visible={showConfetti} particleCount={50} />
       <View style={[styles.glow, { backgroundColor: urgencyGlow }]} />
       <View style={[styles.rankRow, { top: paddingTop }]}>
-        <Text style={styles.rankLbl}>For You</Text>
+        <View style={styles.rankLblWrap}>
+          <Svg width={100} height={20} style={styles.rankLblSvg}>
+            <Defs>
+              <LinearGradient id="fyGrad" x1="0" y1="1" x2="1" y2="0">
+                <Stop offset="0" stopColor={Colors.violet} />
+                <Stop offset="1" stopColor={Colors.gold} />
+              </LinearGradient>
+            </Defs>
+            <SvgText x={0} y={15} fill="url(#fyGrad)" fontFamily={Fonts.display} fontWeight="900" fontSize={13}>For You</SvgText>
+          </Svg>
+        </View>
         <View style={styles.eloTag}>
           <Text style={styles.eloTagText}>{currentTask?.elo ?? 0} ELO</Text>
         </View>
@@ -133,14 +168,16 @@ export default function ForYouScreen() {
         </Animated.View>
       </GestureDetector>
       <View style={styles.actions}>
-        <Pressable style={styles.doneBtn} onPress={handleDone}>
+        <Pressable style={({ pressed }) => [styles.doneBtn, pressed && styles.btnPressed]} onPress={handleDone}>
           <Text style={styles.doneBtnText}>Done</Text>
         </Pressable>
-        <Pressable style={styles.skipBtn} onPress={handleSkip}>
+        <Pressable style={({ pressed }) => [styles.skipBtn, pressed && styles.btnPressed]} onPress={handleSkip}>
           <Text style={styles.skipBtnText}>Skip</Text>
         </Pressable>
       </View>
-      <Text style={styles.tip}>↑ Swipe up to skip</Text>
+      <Animated.View style={[styles.tipWrap, tipBobStyle]}>
+        <Text style={styles.tip}>↑ Swipe up to skip</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -154,7 +191,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   greenFlash: {
-    backgroundColor: 'rgba(52,211,153,0.25)',
+    backgroundColor: 'rgba(52,211,153,0.99)',
     zIndex: 100,
   },
   rankRow: {
@@ -166,6 +203,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     zIndex: 10,
+  },
+  rankLblWrap: {
+    overflow: 'hidden',
+  },
+  rankLblSvg: {
+    marginLeft: 0,
   },
   rankLbl: {
     fontFamily: Fonts.display,
@@ -275,11 +318,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.t2,
   },
-  tip: {
+  btnPressed: {
+    transform: [{ scale: 0.93 }],
+  },
+  tipWrap: {
     position: 'absolute',
     bottom: 80,
     left: 0,
     right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tip: {
     fontFamily: Fonts.bodyBold,
     fontSize: 10,
     letterSpacing: 1,

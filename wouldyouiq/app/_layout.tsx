@@ -18,6 +18,7 @@ import { useUserStore } from '@/stores/userStore';
 import { Colors } from '@/constants/tokens';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SyncManager } from '@/components/SyncManager';
+import { AppShell } from '@/components/AppShell';
 import OnboardingScreen from './onboarding';
 import { MilestoneToast } from '@/components/MilestoneToast';
 
@@ -86,12 +87,14 @@ function RootLayoutNav() {
 
   return (
     <>
-      <SyncManager />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        <MilestoneToast />
-      </Stack>
+      <AppShell>
+        <SyncManager />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          <MilestoneToast />
+        </Stack>
+      </AppShell>
     </>
   );
 }
