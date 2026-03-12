@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
     color: Colors.t2,
   },
   btnPrimary: {
-    background: `linear-gradient(135deg, ${Colors.v2}, ${Colors.violet})`,
     backgroundColor: Colors.violet,
   },
   btnPrimaryText: {
