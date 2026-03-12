@@ -1,8 +1,8 @@
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -14,21 +14,13 @@ import {
   Figtree_800ExtraBold,
 } from '@expo-google-fonts/figtree';
 
-import { useUserStore } from '@/stores/userStore';
 import { Colors } from '@/constants/tokens';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { SyncManager } from '@/components/SyncManager';
-import { AppShell } from '@/components/AppShell';
-import OnboardingScreen from './onboarding';
-import { MilestoneToast } from '@/components/MilestoneToast';
-
-export { ErrorBoundary } from 'expo-router';
-
-export const unstable_settings = {
-  initialRouteName: '(tabs)',
-};
 
 SplashScreen.preventAutoHideAsync();
+
+export const unstable_settings = {
+  initialRouteName: 'onboarding',
+};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -37,7 +29,6 @@ export default function RootLayout() {
     Figtree_600SemiBold,
     Figtree_800ExtraBold,
   });
-  const [webReady, setWebReady] = useState(false);
 
   useEffect(() => {
     if (fontError) throw fontError;
@@ -49,67 +40,34 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
-  // On web, useFonts can hang. Stop blocking after a short delay so the app can render.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const t = setTimeout(() => {
-      setWebReady(true);
-      SplashScreen.hideAsync();
-    }, 800);
-    return () => clearTimeout(t);
-  }, []);
-
-  const ready = fontsLoaded || (Platform.OS === 'web' && webReady);
-
-  if (!ready) {
+  if (!fontsLoaded) {
     return (
-      <View style={[styles.loading, styles.fullScreen]}>
+      <View style={[styles.fullScreen, styles.loading]}>
         <ActivityIndicator size="large" color={Colors.violet} />
       </View>
     );
   }
 
   return (
-    <GestureHandlerRootView style={[styles.flex1, styles.fullScreen]}>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
+    <GestureHandlerRootView style={styles.fullScreen}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="runner" />
+      </Stack>
     </GestureHandlerRootView>
   );
 }
 
-function RootLayoutNav() {
-  const onboardingComplete = useUserStore((s) => s.profile.onboardingComplete);
-
-  if (!onboardingComplete) {
-    return <OnboardingScreen />;
-  }
-
-  return (
-    <>
-      <AppShell>
-        <SyncManager />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          <MilestoneToast />
-        </Stack>
-      </AppShell>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
-  loading: {
+  fullScreen: {
     flex: 1,
+    minHeight: Platform.OS === 'web' ? '100vh' : undefined,
     backgroundColor: Colors.bg,
+  },
+  loading: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  fullScreen: {
-    minHeight: Platform.OS === 'web' ? '100vh' : undefined,
-  },
-  flex1: {
-    flex: 1,
-  },
 });
+

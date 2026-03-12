@@ -1,98 +1,77 @@
-import React from 'react';
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from 'react-native';
+
 import { Colors, Fonts } from '@/constants/tokens';
 
-export default function TabLayout() {
-  const insets = useSafeAreaInsets();
-  const tabBarPaddingBottom = Math.max(insets.bottom, 14);
+function TabLabel({ icon, label }: { icon: string; label: string }) {
+  return (
+    <>
+      <Text style={{ fontSize: 19 }}>{icon}</Text>
+      <Text
+        style={{
+          fontSize: 9,
+          fontFamily: Fonts.bodyBold,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          marginTop: 2,
+        }}
+      >
+        {label}
+      </Text>
+    </>
+  );
+}
 
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.violet,
-        tabBarInactiveTintColor: Colors.t3,
+        headerShown: false,
         tabBarStyle: {
           backgroundColor: 'rgba(7,7,16,0.97)',
-          borderTopWidth: 1,
           borderTopColor: Colors.b1,
-          paddingBottom: tabBarPaddingBottom,
-          height: 56 + tabBarPaddingBottom,
         },
-        tabBarLabelStyle: {
-          fontSize: 9,
-          fontWeight: '700',
-          letterSpacing: 0.5,
-          textTransform: 'uppercase',
-          fontFamily: Fonts.bodyBold,
-        },
-        tabBarIconStyle: { marginBottom: -2 },
-        headerShown: false,
+        tabBarActiveTintColor: Colors.violet,
+        tabBarInactiveTintColor: Colors.t3,
+        tabBarLabelStyle: { fontSize: 9, fontFamily: Fonts.bodyBold },
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="tasks"
         options={{
-          title: 'Tasks',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>📋</Text>
-          ),
+          tabBarLabel: 'Tasks',
+          tabBarIcon: () => <TabLabel icon="📋" label="Tasks" />,
         }}
       />
       <Tabs.Screen
-        name="cal"
+        name="calibrate"
         options={{
-          title: 'Would You?',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>⚡</Text>
-          ),
+          tabBarLabel: 'Would You?',
+          tabBarIcon: () => <TabLabel icon="⚡" label="Would You?" />,
         }}
       />
       <Tabs.Screen
-        name="fy"
+        name="fyp"
         options={{
-          title: 'For You',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>✨</Text>
-          ),
+          tabBarLabel: 'For You',
+          tabBarIcon: () => <TabLabel icon="✨" label="For You" />,
         }}
       />
       <Tabs.Screen
         name="budget"
         options={{
-          title: 'Budget',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>💰</Text>
-          ),
+          tabBarLabel: 'Budget',
+          tabBarIcon: () => <TabLabel icon="💰" label="Budget" />,
         }}
       />
       <Tabs.Screen
-        name="insights"
+        name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ focused }) => (
-            <Text style={[styles.icon, focused && styles.iconActive]}>⚙️</Text>
-          ),
+          tabBarLabel: 'Settings',
+          tabBarIcon: () => <TabLabel icon="⚙️" label="Settings" />,
         }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{ href: null }}
       />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  icon: {
-    fontSize: 19,
-  },
-  iconActive: {
-    transform: [{ scale: 1.3 }],
-  },
-});
