@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -138,78 +138,93 @@ export function CompletionOverlay({
 
   return (
     <>
-      <Animated.View style={[styles.backdrop, backdropStyle]} />
-      <ConfettiCannon
-        visible={visible}
-        particleCount={70}
-        origin={{ x: W / 2, y: H * 0.35 }}
-      />
-      <Animated.View style={[styles.overlay, backdropStyle]} pointerEvents="box-none">
-        <View style={styles.card}>
-          <Animated.View style={[styles.badgeWrap, badgeStyle]}>
-            <Text style={styles.badge}>🎯</Text>
-          </Animated.View>
-          <Animated.Text style={[styles.title, titleStyle]}>Priorities Updated!</Animated.Text>
-          <Animated.Text style={[styles.subtitle, subtitleStyle]}>
-            Your choices are shaping your future ✨
-          </Animated.Text>
-          <Animated.View style={[styles.xpPill, xpStyle]}>
-            <Text style={styles.xpEmoji}>⚡</Text>
+      <Animated.View
+        style={[styles.overlay, backdropStyle]}
+        // @ts-ignore
+        pointerEvents={visible ? 'box-none' : 'none'}
+      >
+        {/* Radial glow */}
+        <View style={styles.glow} pointerEvents="none" />
+
+        <ConfettiCannon
+          visible={visible}
+          particleCount={70}
+          origin={{ x: W / 2, y: H * 0.35 }}
+        />
+
+        {/* Content */}
+        <Animated.View style={[styles.badgeWrap, badgeStyle]}>
+          <Text style={styles.badge}>🎯</Text>
+        </Animated.View>
+
+        <Animated.Text style={[styles.title, titleStyle]}>Priorities Updated!</Animated.Text>
+        <Animated.Text style={[styles.subtitle, subtitleStyle]}>
+          Your choices are shaping your future ✨
+        </Animated.Text>
+
+        <Animated.View style={[styles.xpPill, xpStyle]}>
+          <Text style={styles.xpEmoji}>⚡</Text>
+          <View>
+            <Text style={styles.xpText}>+{xpEarned} XP</Text>
+            <Text style={styles.xpSub}>Earned today</Text>
+          </View>
+        </Animated.View>
+
+        {streak > 0 && (
+          <Animated.View style={[styles.streakCard, streakStyle]}>
+            <Text style={styles.streakEmoji}>🔥</Text>
             <View>
-              <Text style={styles.xpText}>+{xpEarned} XP</Text>
-              <Text style={styles.xpSub}>Earned today</Text>
+              <Text style={styles.streakText}>{streak} Day Streak!</Text>
+              <Text style={styles.streakSub}>Come back tomorrow to keep it going</Text>
             </View>
           </Animated.View>
-          {streak > 0 && (
-            <Animated.View style={[styles.streakCard, streakStyle]}>
-              <Text style={styles.streakEmoji}>🔥</Text>
-              <View>
-                <Text style={styles.streakText}>{streak} Day Streak!</Text>
-                <Text style={styles.streakSub}>Come back tomorrow to keep it going</Text>
-              </View>
-            </Animated.View>
-          )}
-          <Animated.View style={[styles.ctaRow, ctaStyle]}>
-            <Pressable style={[styles.cta, styles.ctaPrimary]} onPress={handleKeepGoing}>
-              <Text style={styles.ctaPrimaryText}>Keep Swiping ⚡</Text>
-            </Pressable>
-            <Pressable style={[styles.cta, styles.ctaSecondary]} onPress={handleSeePriorities}>
-              <Text style={styles.ctaSecondaryText}>My Priorities →</Text>
-            </Pressable>
-          </Animated.View>
-        </View>
+        )}
+
+        <Animated.View style={[styles.ctaRow, ctaStyle]}>
+          <Pressable
+            style={({ pressed }) => [styles.cta, styles.ctaPrimary, pressed && styles.ctaPressed]}
+            onPress={handleKeepGoing}
+          >
+            <Text style={styles.ctaPrimaryText}>Keep Swiping ⚡</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.cta, styles.ctaSecondary, pressed && styles.ctaPressed]}
+            onPress={handleSeePriorities}
+          >
+            <Text style={styles.ctaSecondaryText}>My Priorities →</Text>
+          </Pressable>
+        </Animated.View>
       </Animated.View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    zIndex: 200,
-  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,5,14,0.92)',
+    zIndex: 800,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 201,
     padding: 24,
+    ...(Platform.OS === 'web'
+      ? ({ backdropFilter: 'blur(22px) saturate(1.5)' } as any)
+      : {}),
   },
-  card: {
-    backgroundColor: Colors.s1,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.s2,
-    padding: 28,
-    alignItems: 'center',
-    maxWidth: 320,
+  glow: {
+    ...StyleSheet.absoluteFillObject,
+    // Simulated radial glow at top-center
+    backgroundColor: 'transparent',
+    // On web this would be a radial gradient; we approximate with a View
   },
   badgeWrap: {
     marginBottom: 14,
   },
   badge: {
     fontSize: 72,
+    textShadowColor: 'rgba(167,139,250,0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 30,
   },
   title: {
     fontFamily: Fonts.display,
@@ -287,14 +302,22 @@ const styles = StyleSheet.create({
   },
   cta: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 10,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ctaPressed: {
+    transform: [{ scale: 0.96 }],
+  },
   ctaPrimary: {
-    backgroundColor: Colors.violet,
+    backgroundColor: Colors.v3,
+    shadowColor: Colors.violet,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 28,
+    elevation: 8,
   },
   ctaPrimaryText: {
     fontFamily: Fonts.bodyBold,

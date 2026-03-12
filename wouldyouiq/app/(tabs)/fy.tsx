@@ -30,6 +30,14 @@ const { height: H } = Dimensions.get('window');
 const SKIP_THRESHOLD = -80;
 const TASK_DONE_XP = 30;
 
+type UrgencyLevel = 'high' | 'med' | 'low';
+
+function getUrgencyGlow(urgency: string | undefined): string {
+  if (urgency === 'high') return 'rgba(248,113,113,0.09)';
+  if (urgency === 'med') return 'rgba(245,200,66,0.08)';
+  return 'rgba(167,139,250,0.07)';
+}
+
 export default function ForYouScreen() {
   const insets = useSafeAreaInsets();
   const paddingTop = Math.max(insets.top, 44);
@@ -47,6 +55,7 @@ export default function ForYouScreen() {
   const translateY = useSharedValue(0);
   const tipBobY = useSharedValue(0);
   const flashOpacity = useSharedValue(0);
+  const tipOpacity = useSharedValue(1);
 
   useEffect(() => {
     tipBobY.value = withRepeat(
@@ -63,17 +72,23 @@ export default function ForYouScreen() {
     .onUpdate((e) => {
       if (e.translationY < 0) {
         translateY.value = e.translationY;
+        // Fade tip as user starts swiping
+        if (tipOpacity.value > 0) {
+          tipOpacity.value = Math.max(0, 1 + e.translationY / 60);
+        }
       }
     })
     .onEnd((e) => {
       if (translateY.value < SKIP_THRESHOLD) {
         const len = sorted.length;
+        tipOpacity.value = withTiming(0, { duration: 200 });
         translateY.value = withSpring(-H, { damping: 20 }, () => {
           runOnJS(setIndex)((i) => Math.min(i + 1, Math.max(0, len - 1)));
           translateY.value = 0;
         });
       } else {
         translateY.value = withSpring(0);
+        tipOpacity.value = withTiming(1, { duration: 300 });
       }
     });
 
@@ -83,6 +98,7 @@ export default function ForYouScreen() {
 
   const tipBobStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: tipBobY.value }],
+    opacity: tipOpacity.value,
   }));
 
   const flashStyle = useAnimatedStyle(() => ({
@@ -122,40 +138,52 @@ export default function ForYouScreen() {
     );
   }
 
-  const urgencyGlow =
-    currentTask?.urgency === 'high'
-      ? 'rgba(248,113,113,0.08)'
-      : currentTask?.urgency === 'med'
-        ? 'rgba(245,200,66,0.07)'
-        : 'rgba(167,139,250,0.06)';
+  const glowColor = getUrgencyGlow(currentTask?.urgency);
 
   return (
     <View style={styles.container}>
+      {/* Green flash on done */}
       <Animated.View style={[StyleSheet.absoluteFill, styles.greenFlash, flashStyle]} pointerEvents="none" />
       <ConfettiCannon visible={showConfetti} particleCount={80} />
-      <View style={[styles.glow, { backgroundColor: urgencyGlow }]} />
-      <View style={[styles.rankRow, { top: paddingTop }]}>
-        <View style={styles.rankLblWrap}>
-          <Svg width={100} height={20} style={styles.rankLblSvg}>
-            <Defs>
-              <LinearGradient id="fyGrad" x1="0" y1="1" x2="1" y2="0">
-                <Stop offset="0" stopColor={Colors.violet} />
-                <Stop offset="1" stopColor={Colors.gold} />
-              </LinearGradient>
-            </Defs>
-            <SvgText x={0} y={15} fill="url(#fyGrad)" fontFamily={Fonts.display} fontWeight="900" fontSize={13}>For You</SvgText>
-          </Svg>
-        </View>
-        <View style={styles.eloTag}>
-          <Text style={styles.eloTagText}>{currentTask?.elo ?? 0} ELO</Text>
-        </View>
-      </View>
+
+      {/* Full-screen swipeable card area */}
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.cardWrap, cardStyle]}>
-          <View style={[styles.card, { backgroundColor: Colors.s1 }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, cardStyle]}>
+          {/* Urgency glow background */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: glowColor }]} pointerEvents="none" />
+
+          {/* Rank row — top of screen */}
+          <View style={[styles.rankRow, { top: paddingTop }]}>
+            <View>
+              <Svg width={80} height={20}>
+                <Defs>
+                  <LinearGradient id="fyGrad" x1="0" y1="1" x2="1" y2="0">
+                    <Stop offset="0" stopColor={Colors.violet} />
+                    <Stop offset="1" stopColor={Colors.gold} />
+                  </LinearGradient>
+                </Defs>
+                <SvgText
+                  x={0}
+                  y={15}
+                  fill="url(#fyGrad)"
+                  fontFamily={Fonts.display}
+                  fontWeight="900"
+                  fontSize={13}
+                >
+                  For You
+                </SvgText>
+              </Svg>
+            </View>
+            <View style={styles.eloTag}>
+              <Text style={styles.eloTagText}>{currentTask?.elo ?? 0} ELO</Text>
+            </View>
+          </View>
+
+          {/* Centered content */}
+          <View style={styles.cardContent}>
             {currentTask?.urgency === 'high' && (
               <View style={styles.urgBadge}>
-                <Text style={styles.urgBadgeText}>URGENT</Text>
+                <Text style={styles.urgBadgeText}>⚡ URGENT</Text>
               </View>
             )}
             <Text style={styles.emoji}>{currentTask?.emoji}</Text>
@@ -165,22 +193,35 @@ export default function ForYouScreen() {
             ) : null}
             {currentTask?.deadline && (
               <Text style={styles.dlText}>
-                {currentTask.deadline === 'today' ? 'Due today' : 'Due this week'}
+                📅 {currentTask.deadline === 'today' ? 'Due today' : 'Due this week'}
               </Text>
             )}
+
+            {/* Action buttons — inside the card, lower section */}
+            <View style={styles.actions}>
+              <Pressable
+                style={({ pressed }) => [styles.doneBtn, pressed && styles.btnPressed]}
+                onPress={handleDone}
+              >
+                <Text style={styles.doneBtnIcon}>✅</Text>
+                <Text style={styles.doneBtnText}>Done</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.skipBtn, pressed && styles.btnPressed]}
+                onPress={handleSkip}
+              >
+                <Text style={styles.skipBtnIcon}>⏭</Text>
+                <Text style={styles.skipBtnText}>Skip</Text>
+              </Pressable>
+            </View>
           </View>
         </Animated.View>
       </GestureDetector>
-      <View style={styles.actions}>
-        <Pressable style={({ pressed }) => [styles.doneBtn, pressed && styles.btnPressed]} onPress={handleDone}>
-          <Text style={styles.doneBtnText}>Done</Text>
-        </Pressable>
-        <Pressable style={({ pressed }) => [styles.skipBtn, pressed && styles.btnPressed]} onPress={handleSkip}>
-          <Text style={styles.skipBtnText}>Skip</Text>
-        </Pressable>
-      </View>
-      <Animated.View style={[styles.tipWrap, tipBobStyle]}>
-        <Text style={styles.tip}>↑ Swipe up to skip</Text>
+
+      {/* Swipe tip — above nav */}
+      <Animated.View style={[styles.tipWrap, tipBobStyle]} pointerEvents="none">
+        <Text style={styles.tipArrow}>↑</Text>
+        <Text style={styles.tip}>Swipe up to skip</Text>
       </Animated.View>
     </View>
   );
@@ -190,9 +231,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bg,
-  },
-  glow: {
-    ...StyleSheet.absoluteFillObject,
   },
   greenFlash: {
     backgroundColor: 'rgba(52,211,153,0.99)',
@@ -208,18 +246,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     zIndex: 10,
   },
-  rankLblWrap: {
-    overflow: 'hidden',
-  },
-  rankLblSvg: {
-    marginLeft: 0,
-  },
-  rankLbl: {
-    fontFamily: Fonts.display,
-    fontWeight: '900',
-    fontSize: 13,
-    color: Colors.violet,
-  },
   eloTag: {
     backgroundColor: Colors.s2,
     borderWidth: 1,
@@ -233,21 +259,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bodyBold,
     color: Colors.t3,
   },
-  cardWrap: {
+  cardContent: {
     flex: 1,
-    padding: 20,
-    paddingTop: 60,
-  },
-  card: {
-    alignSelf: 'stretch',
-    maxHeight: H * 0.52,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.s2,
-    paddingVertical: 20,
-    paddingHorizontal: 28,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingBottom: 100,
   },
   urgBadge: {
     backgroundColor: 'rgba(248,113,113,0.14)',
@@ -262,11 +279,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: Fonts.bodyBold,
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
     color: Colors.red,
   },
   emoji: {
     fontSize: 84,
     marginBottom: 14,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 12 },
+    textShadowRadius: 36,
   },
   name: {
     fontFamily: Fonts.display,
@@ -275,10 +296,11 @@ const styles = StyleSheet.create({
     color: Colors.t1,
     textAlign: 'center',
     marginBottom: 8,
-    lineHeight: 28,
+    lineHeight: 30,
   },
   timeEst: {
     fontSize: 14,
+    fontFamily: Fonts.bodyLight,
     color: Colors.t2,
     marginBottom: 6,
   },
@@ -290,34 +312,42 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    gap: 16,
+    marginTop: 24,
     justifyContent: 'center',
   },
   doneBtn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 14,
     paddingHorizontal: 22,
     borderRadius: 18,
     backgroundColor: Colors.green2,
-    minWidth: 120,
-    alignItems: 'center',
+    shadowColor: Colors.green,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    elevation: 6,
   },
+  doneBtnIcon: { fontSize: 16 },
   doneBtnText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 13,
     color: '#042b1e',
   },
   skipBtn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
     paddingVertical: 14,
     paddingHorizontal: 22,
     borderRadius: 18,
     backgroundColor: Colors.s2,
     borderWidth: 1,
     borderColor: Colors.b2,
-    minWidth: 120,
-    alignItems: 'center',
   },
+  skipBtnIcon: { fontSize: 16 },
   skipBtnText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 13,
@@ -333,6 +363,11 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tipArrow: {
+    fontSize: 18,
+    opacity: 0.38,
+    color: Colors.t3,
   },
   tip: {
     fontFamily: Fonts.bodyBold,

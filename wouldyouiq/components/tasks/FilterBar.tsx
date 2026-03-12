@@ -4,11 +4,11 @@ import { Colors, Fonts } from '@/constants/tokens';
 
 export type FilterMode = 'all' | 'essential' | 'deadline' | 'done';
 
-const FILTERS: { key: FilterMode; label: string; emoji: string }[] = [
-  { key: 'all', label: 'All', emoji: '📋' },
-  { key: 'essential', label: 'Essential', emoji: '⭐' },
-  { key: 'deadline', label: 'Due Soon', emoji: '📅' },
-  { key: 'done', label: 'Done', emoji: '✅' },
+const FILTERS: { key: FilterMode; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'essential', label: '⭐ Essential' },
+  { key: 'deadline', label: '📅 Due Soon' },
+  { key: 'done', label: '✅ Done' },
 ];
 
 type FilterBarProps = {
@@ -23,13 +23,12 @@ export function FilterBar({ active, onSelect }: FilterBarProps) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {FILTERS.map(({ key, label, emoji }) => (
+      {FILTERS.map(({ key, label }) => (
         <Pressable
           key={key}
           style={[styles.chip, active === key && styles.chipActive]}
           onPress={() => onSelect(key)}
         >
-          <Text style={styles.emoji}>{emoji}</Text>
           <Text style={[styles.label, active === key && styles.labelActive]}>
             {label}
           </Text>
@@ -45,12 +44,9 @@ const styles = StyleSheet.create({
     gap: 7,
     marginBottom: 16,
     paddingBottom: 2,
-    paddingHorizontal: 0,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1.5,
@@ -61,14 +57,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.violet,
     borderColor: Colors.violet,
   },
-  emoji: {
-    fontSize: 12,
-    marginRight: 4,
-  },
   label: {
     fontFamily: Fonts.bodyBold,
     fontSize: 12,
-    lineHeight: 16,
     color: Colors.t3,
   },
   labelActive: {

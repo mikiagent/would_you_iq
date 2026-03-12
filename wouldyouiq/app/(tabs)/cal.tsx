@@ -12,6 +12,7 @@ import type { Task } from '@/types/models';
 import type { BudgetItem } from '@/types/models';
 import { Colors, Fonts } from '@/constants/tokens';
 import { TwoCardArena } from '@/components/calibrate/TwoCardArena';
+import { SingleCardArena } from '@/components/calibrate/SingleCardArena';
 import { CompletionOverlay } from '@/components/calibrate/CompletionOverlay';
 
 const COMPARISON_XP = 20;
@@ -171,8 +172,6 @@ export default function WouldYouScreen() {
     );
   }
 
-  const [challenger, defender] = pair;
-
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop }]}>
@@ -207,14 +206,15 @@ export default function WouldYouScreen() {
         </View>
         <View style={[styles.dot, round >= 2 && styles.dotOn]} />
       </View>
-      <TwoCardArena
-        challenger={challenger}
-        defender={defender}
-        stake={stake}
-        onDecision={handleDecision}
-        onToggleChallengerEssential={handleToggleChallengerEssential}
-        onToggleDefenderEssential={handleToggleDefenderEssential}
-      />
+      {pair ? (
+        <SingleCardArena
+          challenger={pair[0]}
+          defender={pair[1] ?? null}
+          questionLabel={stake?.qLabel ?? 'Which would you choose?'}
+          onDecision={handleDecision}
+          onToggleEssential={handleToggleChallengerEssential}
+        />
+      ) : null}
       <CompletionOverlay
         visible={showCompletion}
         xpEarned={sessionXp}

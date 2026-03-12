@@ -31,6 +31,71 @@ type TwoCardArenaProps = {
   onToggleDefenderEssential: () => void;
 };
 
+/** Renders question text with optional stake markup */
+function QuestionText({
+  challenger,
+  defender,
+  stake,
+}: {
+  challenger: Task;
+  defender: Task;
+  stake: Stake | null;
+}) {
+  const priceA = challenger.timeEstimate || '';
+  const priceB = defender.timeEstimate || '';
+
+  if (!stake) {
+    return (
+      <Text style={styles.qText}>
+        <Text>{challenger.emoji} </Text>
+        <Text style={styles.qName}>{challenger.name}</Text>
+        {priceA ? <Text style={styles.qPrice}> ({priceA})</Text> : null}
+        <Text style={styles.qOr}>{'\n'}or{'\n'}</Text>
+        <Text>{defender.emoji} </Text>
+        <Text style={styles.qName}>{defender.name}</Text>
+        {priceB ? <Text style={styles.qPrice}> ({priceB})</Text> : null}
+        <Text style={styles.qMark}>?</Text>
+      </Text>
+    );
+  }
+
+  const modIsA = stake.modSide === 'A';
+  const isBad = stake.tickDir === 'up';
+
+  return (
+    <Text style={styles.qText}>
+      {/* Challenger side */}
+      <Text>{challenger.emoji} </Text>
+      <Text style={styles.qName}>{challenger.name}</Text>
+      {modIsA ? (
+        <>
+          <Text style={styles.qPriceStruck}> ({priceA})</Text>
+          <Text style={[styles.qPriceMark, isBad ? styles.qPriceBad : styles.qPriceGood]}>
+            {' '}{stake.newPriceDisplay}
+          </Text>
+        </>
+      ) : (
+        priceA ? <Text style={styles.qPrice}> ({priceA})</Text> : null
+      )}
+      <Text style={styles.qOr}>{'\n'}or{'\n'}</Text>
+      {/* Defender side */}
+      <Text>{defender.emoji} </Text>
+      <Text style={styles.qName}>{defender.name}</Text>
+      {!modIsA ? (
+        <>
+          <Text style={styles.qPriceStruck}> ({priceB})</Text>
+          <Text style={[styles.qPriceMark, isBad ? styles.qPriceBad : styles.qPriceGood]}>
+            {' '}{stake.newPriceDisplay}
+          </Text>
+        </>
+      ) : (
+        priceB ? <Text style={styles.qPrice}> ({priceB})</Text> : null
+      )}
+      <Text style={styles.qMark}>?</Text>
+    </Text>
+  );
+}
+
 export function TwoCardArena({
   challenger,
   defender,
@@ -86,6 +151,7 @@ export function TwoCardArena({
     });
 
   const questionLabel = stake?.qLabel ?? 'Which would you do first?';
+
   const priceOverrideA =
     stake?.modSide === 'A'
       ? {
@@ -173,14 +239,28 @@ export function TwoCardArena({
     };
   });
 
+  // Hint arrow animated opacity
+  const hintLStyle = useAnimatedStyle(() => {
+    const p = dragProgress.value;
+    const lit = p < -0.18 ? 1 : 0.38;
+    return { opacity: lit };
+  });
+  const hintRStyle = useAnimatedStyle(() => {
+    const p = dragProgress.value;
+    const lit = p > 0.18 ? 1 : 0.38;
+    return { opacity: lit };
+  });
+
   return (
     <GestureDetector gesture={panGesture}>
       <View style={styles.arena}>
         <View style={styles.qZone}>
           <Text style={styles.qLabel}>{questionLabel}</Text>
-          <Text style={styles.qText}>
-            {challenger.name} or {defender.name}?
-          </Text>
+          <QuestionText
+            challenger={challenger}
+            defender={defender}
+            stake={stake}
+          />
         </View>
         <View style={styles.duelRow}>
           <Animated.View style={[styles.cardWrap, cardAStyle]}>
@@ -212,8 +292,8 @@ export function TwoCardArena({
           </Animated.View>
         </View>
         <View style={styles.swipeHint}>
-          <Text style={styles.hintText}>← A wins</Text>
-          <Text style={styles.hintText}>B wins →</Text>
+          <Animated.Text style={[styles.hintText, hintLStyle]}>← A wins</Animated.Text>
+          <Animated.Text style={[styles.hintText, hintRStyle]}>B wins →</Animated.Text>
         </View>
       </View>
     </GestureDetector>
@@ -243,10 +323,49 @@ const styles = StyleSheet.create({
   qText: {
     fontFamily: Fonts.display,
     fontWeight: '900',
-    fontSize: 19,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 22,
     color: Colors.t1,
     textAlign: 'center',
+  },
+  qName: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 16,
+    color: Colors.t1,
+  },
+  qPrice: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 12,
+    color: Colors.t2,
+  },
+  qPriceStruck: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 11,
+    color: Colors.t3,
+    textDecorationLine: 'line-through',
+  },
+  qPriceMark: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  qPriceGood: {
+    color: Colors.green,
+  },
+  qPriceBad: {
+    color: Colors.red,
+  },
+  qOr: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 11,
+    color: Colors.t3,
+  },
+  qMark: {
+    fontFamily: Fonts.display,
+    fontWeight: '900',
+    fontSize: 16,
+    color: Colors.t1,
   },
   duelRow: {
     flex: 1,
@@ -302,7 +421,6 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 9,
     fontFamily: Fonts.bodyBold,
-    color: Colors.t3,
-    opacity: 0.38,
+    color: Colors.gold,
   },
 });
