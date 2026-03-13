@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -18,11 +20,13 @@ import {
 
 import { ActionButton, Badge, Surface } from '@/components/primitives';
 import { useConfettiOverlay } from '@/components/ConfettiLayer';
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { getForYouQueue, medalForIndex } from '@/domain/logic';
 import { useAppStore } from '@/domain/store';
 
 export default function ForYouScreen() {
+  const { width } = useWindowDimensions();
   const tasks = useAppStore((state) => state.tasks);
   const toggleTaskDone = useAppStore((state) => state.toggleTaskDone);
   const startRunner = useAppStore((state) => state.startRunner);
@@ -31,6 +35,7 @@ export default function ForYouScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [detailOpen, setDetailOpen] = useState(true);
   const [skipLocked, setSkipLocked] = useState(false);
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   const cardY = useRef(new Animated.Value(0)).current;
   const detailAnim = useRef(new Animated.Value(0)).current;
@@ -219,162 +224,178 @@ export default function ForYouScreen() {
   if (!task) {
     return (
       <View style={styles.root}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>For You</Text>
+        <View style={[styles.content, desktop && styles.contentDesktop]}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>For You</Text>
+          </View>
+          <Surface style={[styles.emptyCard, desktop && styles.emptyCardDesktop]}>
+            <Animated.Text
+              style={[
+                styles.emptyEmoji,
+                {
+                  transform: [
+                    {
+                      translateY: emptyPulse.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -8],
+                      }),
+                    },
+                    {
+                      scale: emptyPulse.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.06],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              ✅
+            </Animated.Text>
+            <Text style={styles.emptyTitle}>All Done for Now!</Text>
+            <Text style={styles.emptySub}>
+              All tasks are completed. Nice work.
+            </Text>
+          </Surface>
         </View>
-        <Surface style={styles.emptyCard}>
-          <Animated.Text
-            style={[
-              styles.emptyEmoji,
-              {
-                transform: [
-                  {
-                    translateY: emptyPulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -8],
-                    }),
-                  },
-                  {
-                    scale: emptyPulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.06],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            ✅
-          </Animated.Text>
-          <Text style={styles.emptyTitle}>All Done for Now!</Text>
-          <Text style={styles.emptySub}>
-            All tasks are completed. Nice work.
-          </Text>
-        </Surface>
       </View>
     );
   }
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>For You</Text>
-      </View>
-      {nextTask ? (
+      <View style={[styles.content, desktop && styles.contentDesktop]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>For You</Text>
+        </View>
+        {nextTask ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.cardStackPreview,
+              desktop && styles.cardStackPreviewDesktop,
+              {
+                opacity: nextCardOpacity,
+                transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }],
+              },
+            ]}
+          >
+            <Surface style={[styles.card, styles.previewCard, desktop && styles.cardDesktop]}>
+              <View style={styles.swipeZone}>
+                <View style={styles.topRow}>
+                  <Text style={[styles.rankLabel, nextTaskTone.labelStyle]}>
+                    {formatPriorityLabel(nextTaskRankIndex, 'Up Next')}
+                  </Text>
+                  <Badge label={`ELO ${nextTask.elo}`} tone={nextTaskTone.badgeTone} />
+                </View>
+                <Text style={styles.previewEmoji}>{nextTask.e}</Text>
+                <Text style={styles.previewName}>{nextTask.n}</Text>
+                <Text style={styles.meta}>⏱ {nextTask.t}</Text>
+              </View>
+            </Surface>
+          </Animated.View>
+        ) : null}
         <Animated.View
-          pointerEvents="none"
+          key={task.id}
           style={[
-            styles.cardStackPreview,
-            {
-              opacity: nextCardOpacity,
-              transform: [{ translateY: nextCardTranslateY }, { scale: nextCardScale }],
-            },
+            styles.cardWrap,
+            desktop && styles.cardWrapDesktop,
+            { transform: [{ translateY: cardY }, { scale: cardIntro }] },
           ]}
         >
-          <Surface style={[styles.card, styles.previewCard]}>
+          <Surface style={[styles.card, desktop && styles.cardDesktop]}>
             <View style={styles.swipeZone}>
               <View style={styles.topRow}>
-                <Text style={[styles.rankLabel, nextTaskTone.labelStyle]}>
-                  {formatPriorityLabel(nextTaskRankIndex, 'Up Next')}
+                <Text style={[styles.rankLabel, taskTone.labelStyle]}>
+                  {formatPriorityLabel(taskRankIndex)}
+                  {task.ess ? ' ⭐' : ''}
                 </Text>
-                <Badge label={`ELO ${nextTask.elo}`} tone={nextTaskTone.badgeTone} />
+                <Badge label={`ELO ${task.elo}`} tone={taskTone.badgeTone} />
               </View>
-              <Text style={styles.previewEmoji}>{nextTask.e}</Text>
-              <Text style={styles.previewName}>{nextTask.n}</Text>
-              <Text style={styles.meta}>⏱ {nextTask.t}</Text>
+              <PanGestureHandler
+                enabled={!skipLocked}
+                activeOffsetY={[-12, 999]}
+                failOffsetX={[-24, 24]}
+                onGestureEvent={handleGestureEvent}
+                onHandlerStateChange={handleGestureStateChange}
+              >
+                <Animated.View style={styles.swipeHandle}>
+                  <Animated.Text
+                    style={[
+                      styles.emoji,
+                      desktop && styles.emojiDesktop,
+                      {
+                        transform: [
+                          {
+                            scale: emojiPulse.interpolate({
+                              inputRange: [0, 0.5, 1],
+                              outputRange: [1, 1.06, 1],
+                            }),
+                          },
+                          {
+                            translateY: emojiPulse.interpolate({
+                              inputRange: [0, 0.5, 1],
+                              outputRange: [0, -5, 0],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    {task.e}
+                  </Animated.Text>
+                  <Text style={[styles.name, desktop && styles.nameDesktop]}>{task.n}</Text>
+                  <Text style={styles.meta}>⏱ {task.t}</Text>
+                  <PressableTellMeMore
+                    open={detailOpen}
+                    onPress={() => setDetailOpen((value) => !value)}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.detailWrap,
+                      desktop && styles.detailWrapDesktop,
+                      {
+                        maxHeight: detailAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 120],
+                        }),
+                        opacity: detailAnim,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.detail, desktop && styles.detailDesktop]}>
+                      {task.detail ?? 'A focused priority block.'}
+                    </Text>
+                  </Animated.View>
+                </Animated.View>
+              </PanGestureHandler>
+            </View>
+            <View style={styles.buttonRow} pointerEvents="box-none">
+              <ActionButton
+                label={task.subtasks.length ? '▶ Start' : '✅ Done'}
+                tone="success"
+                onPress={() => {
+                  if (task.subtasks.length) {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    startRunner(task.id);
+                    router.navigate({ pathname: '/runner', params: { taskId: task.id } });
+                    return;
+                  }
+
+                  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  triggerConfetti({ count: 90 });
+                  toggleTaskDone(task.id);
+                }}
+              />
+              <ActionButton label={skipLocked ? 'Skipping…' : '⏭ Skip'} onPress={skipTask} />
             </View>
           </Surface>
         </Animated.View>
-      ) : null}
-      <Animated.View
-        key={task.id}
-        style={[styles.cardWrap, { transform: [{ translateY: cardY }, { scale: cardIntro }] }]}
-      >
-        <Surface style={styles.card}>
-          <View style={styles.swipeZone}>
-            <View style={styles.topRow}>
-              <Text style={[styles.rankLabel, taskTone.labelStyle]}>
-                {formatPriorityLabel(taskRankIndex)}
-                {task.ess ? ' ⭐' : ''}
-              </Text>
-              <Badge label={`ELO ${task.elo}`} tone={taskTone.badgeTone} />
-            </View>
-            <PanGestureHandler
-              enabled={!skipLocked}
-              activeOffsetY={[-12, 999]}
-              failOffsetX={[-24, 24]}
-              onGestureEvent={handleGestureEvent}
-              onHandlerStateChange={handleGestureStateChange}
-            >
-              <Animated.View style={styles.swipeHandle}>
-                <Animated.Text
-                  style={[
-                    styles.emoji,
-                    {
-                      transform: [
-                        {
-                          scale: emojiPulse.interpolate({
-                            inputRange: [0, 0.5, 1],
-                            outputRange: [1, 1.06, 1],
-                          }),
-                        },
-                        {
-                          translateY: emojiPulse.interpolate({
-                            inputRange: [0, 0.5, 1],
-                            outputRange: [0, -5, 0],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  {task.e}
-                </Animated.Text>
-                <Text style={styles.name}>{task.n}</Text>
-                <Text style={styles.meta}>⏱ {task.t}</Text>
-                <PressableTellMeMore open={detailOpen} onPress={() => setDetailOpen((value) => !value)} />
-                <Animated.View
-                  style={[
-                    styles.detailWrap,
-                    {
-                      maxHeight: detailAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 120],
-                      }),
-                      opacity: detailAnim,
-                    },
-                  ]}
-                >
-                  <Text style={styles.detail}>{task.detail ?? 'A focused priority block.'}</Text>
-                </Animated.View>
-              </Animated.View>
-            </PanGestureHandler>
-          </View>
-          <View style={styles.buttonRow} pointerEvents="box-none">
-            <ActionButton
-              label={task.subtasks.length ? '▶ Start' : '✅ Done'}
-              tone="success"
-              onPress={() => {
-                if (task.subtasks.length) {
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  startRunner(task.id);
-                  router.navigate({ pathname: '/runner', params: { taskId: task.id } });
-                  return;
-                }
 
-                void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                triggerConfetti({ count: 90 });
-                toggleTaskDone(task.id);
-              }}
-            />
-            <ActionButton label={skipLocked ? 'Skipping…' : '⏭ Skip'} onPress={skipTask} />
-          </View>
-        </Surface>
-      </Animated.View>
-
-      <View style={styles.tip}>
-        <Text style={styles.tipArrow}>↑</Text>
-        <Text style={styles.tipLabel}>Swipe up to skip</Text>
+        <View style={styles.tip}>
+          <Text style={styles.tipArrow}>↑</Text>
+          <Text style={styles.tipLabel}>Swipe up to skip</Text>
+        </View>
       </View>
       {confettiOverlay}
     </View>
@@ -438,8 +459,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
-    paddingHorizontal: 18,
     paddingBottom: 80,
+  },
+  content: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Layout.readingMaxWidth,
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    position: 'relative',
+  },
+  contentDesktop: {
+    paddingHorizontal: 28,
+    paddingTop: 8,
   },
   header: {
     paddingTop: 12,
@@ -455,6 +487,11 @@ const styles = StyleSheet.create({
     zIndex: 2,
     marginTop: 28,
   },
+  cardWrapDesktop: {
+    maxWidth: 860,
+    alignSelf: 'center',
+    marginTop: 56,
+  },
   cardStackPreview: {
     position: 'absolute',
     left: 18,
@@ -462,11 +499,21 @@ const styles = StyleSheet.create({
     top: 146,
     zIndex: 1,
   },
+  cardStackPreviewDesktop: {
+    left: 28,
+    right: 28,
+    top: 176,
+  },
   card: {
     minHeight: 540,
     paddingHorizontal: 24,
     paddingVertical: 28,
     alignItems: 'center',
+  },
+  cardDesktop: {
+    minHeight: 600,
+    paddingHorizontal: 48,
+    paddingVertical: 40,
   },
   previewCard: {
     backgroundColor: 'rgba(14,14,28,0.78)',
@@ -511,6 +558,10 @@ const styles = StyleSheet.create({
     fontSize: 88,
     marginBottom: 18,
   },
+  emojiDesktop: {
+    fontSize: 100,
+    marginBottom: 22,
+  },
   previewEmoji: {
     fontSize: 72,
     marginBottom: 18,
@@ -522,6 +573,10 @@ const styles = StyleSheet.create({
     color: Colors.t1,
     textAlign: 'center',
     lineHeight: 42,
+  },
+  nameDesktop: {
+    fontSize: 42,
+    lineHeight: 52,
   },
   previewName: {
     fontFamily: Fonts.display,
@@ -545,6 +600,9 @@ const styles = StyleSheet.create({
   detailWrap: {
     overflow: 'hidden',
   },
+  detailWrapDesktop: {
+    maxWidth: 640,
+  },
   detail: {
     fontFamily: Fonts.bodyLight,
     fontSize: 14,
@@ -552,6 +610,10 @@ const styles = StyleSheet.create({
     color: Colors.t2,
     textAlign: 'center',
     marginTop: 12,
+  },
+  detailDesktop: {
+    fontSize: 18,
+    lineHeight: 30,
   },
   buttonRow: {
     width: '100%',
@@ -579,6 +641,12 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
     gap: 10,
+  },
+  emptyCardDesktop: {
+    maxWidth: 720,
+    alignSelf: 'center',
+    marginTop: 96,
+    padding: 36,
   },
   emptyEmoji: {
     fontSize: 80,

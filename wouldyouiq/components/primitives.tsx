@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { useCloudSync } from '@/components/SyncProvider';
 import { Colors, Fonts, Spacing } from '@/constants/tokens';
 
 export function PageHeader({
@@ -21,10 +22,37 @@ export function PageHeader({
   title: string;
   right?: ReactNode;
 }) {
+  const { isSignedIn, isSaving, manualSave, saveLabel, saveState } = useCloudSync();
+
   return (
     <View style={styles.header}>
       <Text style={styles.pageTitle}>{title}</Text>
-      {right ? <View>{right}</View> : null}
+      <View style={styles.headerActions}>
+        <View
+          style={[
+            styles.savePill,
+            saveState === 'saved'
+              ? styles.savePillSaved
+              : saveState === 'saving'
+              ? styles.savePillSaving
+              : saveState === 'error'
+              ? styles.savePillError
+              : styles.savePillUnsaved,
+          ]}
+        >
+          <Text style={styles.savePillLabel}>{saveLabel}</Text>
+        </View>
+        <Pressable
+          style={[styles.saveButton, (!isSignedIn || isSaving) && styles.saveButtonDisabled]}
+          onPress={() => {
+            void manualSave();
+          }}
+          disabled={!isSignedIn || isSaving}
+        >
+          <Text style={styles.saveButtonLabel}>Save</Text>
+        </Pressable>
+        {right ? <View>{right}</View> : null}
+      </View>
     </View>
   );
 }
@@ -138,7 +166,7 @@ export function Fab({ onPress }: { onPress: () => void }) {
   return (
     <Pressable style={styles.fabWrap} onPress={onPress}>
       <LinearGradient colors={[Colors.v2, Colors.violet]} style={styles.fab}>
-        <Text style={styles.fabLabel}>＋</Text>
+        <Text style={styles.fabLabel}>+</Text>
       </LinearGradient>
     </Pressable>
   );
@@ -250,9 +278,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   pageTitle: {
     fontFamily: Fonts.display,
     fontSize: 22,
+    color: Colors.t1,
+  },
+  savePill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+  },
+  savePillSaved: {
+    backgroundColor: 'rgba(52,211,153,0.12)',
+    borderColor: 'rgba(52,211,153,0.28)',
+  },
+  savePillSaving: {
+    backgroundColor: 'rgba(167,139,250,0.12)',
+    borderColor: 'rgba(167,139,250,0.28)',
+  },
+  savePillUnsaved: {
+    backgroundColor: 'rgba(245,200,66,0.08)',
+    borderColor: 'rgba(245,200,66,0.2)',
+  },
+  savePillError: {
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderColor: 'rgba(248,113,113,0.24)',
+  },
+  savePillLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 10,
+    color: Colors.t1,
+    letterSpacing: 0.3,
+  },
+  saveButton: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: Colors.violet,
+    backgroundColor: 'rgba(124,106,247,0.18)',
+  },
+  saveButtonDisabled: {
+    opacity: 0.45,
+  },
+  saveButtonLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 11,
     color: Colors.t1,
   },
   surface: {
@@ -391,7 +468,9 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 28,
     color: '#fff',
-    marginTop: -2,
+    marginTop: -1,
+    minWidth: 24,
+    textAlign: 'center',
   },
   sheetBackdrop: {
     flex: 1,

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { DonutChart } from '@/components/DonutChart';
 import { ActionButton, Badge, Fab, Field, PageHeader, SegmentedControl, Sheet, Surface, ToggleRow } from '@/components/primitives';
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import {
   alignmentScore,
@@ -28,6 +29,7 @@ function blankExpense(): ExpenseDraft {
 }
 
 export default function BudgetScreen() {
+  const { width } = useWindowDimensions();
   const budget = useAppStore((state) => state.budget);
   const budgetView = useAppStore((state) => state.budgetView);
   const setBudgetView = useAppStore((state) => state.setBudgetView);
@@ -43,6 +45,7 @@ export default function BudgetScreen() {
   const [incomeDraft, setIncomeDraft] = useState(String(budget.income));
   const [insightIndex, setInsightIndex] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   const totals = budgetTotals(budget);
   const segments = budgetSegments(budget);
@@ -64,19 +67,20 @@ export default function BudgetScreen() {
 
   return (
     <View style={styles.root}>
-      <PageHeader title="Budget 💰" />
-      <SegmentedControl
-        items={[
-          { label: '📊 Overview', value: 'overview' },
-          { label: '💡 Insights', value: 'insights' },
-        ]}
-        value={budgetView}
-        onChange={setBudgetView}
-      />
+      <View style={[styles.content, desktop && styles.contentDesktop]}>
+        <PageHeader title="Budget 💰" />
+        <SegmentedControl
+          items={[
+            { label: '📊 Overview', value: 'overview' },
+            { label: '💡 Insights', value: 'insights' },
+          ]}
+          value={budgetView}
+          onChange={setBudgetView}
+        />
 
-      {budgetView === 'overview' ? (
-        <>
-          <ScrollView contentContainerStyle={styles.scroll}>
+        {budgetView === 'overview' ? (
+          <>
+            <ScrollView contentContainerStyle={styles.scroll}>
             <Surface style={styles.incomeCard}>
               <Text style={styles.sectionLabel}>Monthly Income</Text>
               <View style={styles.incomeRow}>
@@ -169,13 +173,13 @@ export default function BudgetScreen() {
                 </Surface>
               );
             })}
-          </ScrollView>
-          <Fab onPress={openCreate} />
-        </>
-      ) : null}
+            </ScrollView>
+            <Fab onPress={openCreate} />
+          </>
+        ) : null}
 
-      {budgetView === 'insights' ? (
-        <View style={styles.insightsWrap}>
+        {budgetView === 'insights' ? (
+          <View style={styles.insightsWrap}>
           {activeInsight ? (
             <>
               <View style={styles.dots}>
@@ -214,8 +218,9 @@ export default function BudgetScreen() {
               <Text style={styles.insightDetail}>As you compare items, this tab will surface patterns and tradeoffs.</Text>
             </Surface>
           )}
-        </View>
-      ) : null}
+          </View>
+        ) : null}
+      </View>
 
       <Sheet open={sheetOpen} title={draft.id ? 'Edit Expense' : 'Add Expense'} onClose={() => setSheetOpen(false)}>
         <View style={styles.emojiRow}>
@@ -301,6 +306,15 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
+  },
+  content: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Layout.contentMaxWidth,
+    alignSelf: 'center',
+  },
+  contentDesktop: {
+    paddingTop: 8,
   },
   scroll: {
     paddingHorizontal: 18,

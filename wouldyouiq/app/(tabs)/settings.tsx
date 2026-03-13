@@ -1,33 +1,51 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { useCloudSync } from '@/components/SyncProvider';
 import { ActionButton, Field, PageHeader, Sheet, StatCard, Surface } from '@/components/primitives';
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { useAppStore } from '@/domain/store';
 
 export default function SettingsScreen() {
+  const { width } = useWindowDimensions();
   const user = useAppStore((state) => state.user);
   const updateUserName = useAppStore((state) => state.updateUserName);
   const resetApp = useAppStore((state) => state.resetApp);
+  const { avatarUrl, displayName, email, isSignedIn, signInWithGoogle, signOut } = useCloudSync();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState(user.name);
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   return (
     <View style={styles.root}>
-      <PageHeader title="Settings" />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={[styles.content, desktop && styles.contentDesktop]}>
+        <PageHeader title="Settings" />
+        <ScrollView contentContainerStyle={styles.scroll}>
         <Surface style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLabel}>{user.name.slice(0, 1).toUpperCase()}</Text>
-          </View>
-          <Text style={styles.profileName}>{user.name}</Text>
-          <Text style={styles.profileSub}>Frontend-only build. Supabase profile sync will slot in later.</Text>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLabel}>{user.name.slice(0, 1).toUpperCase()}</Text>
+            </View>
+          )}
+          <Text style={styles.profileName}>{displayName ?? user.name}</Text>
+          <Text style={styles.profileSub}>
+            {isSignedIn ? email ?? 'Signed in with Google' : 'Use Google sign-in to sync this device to Supabase.'}
+          </Text>
           <ActionButton
             label="Edit Profile"
             tone="primary"
             onPress={() => {
               setName(user.name);
               setSheetOpen(true);
+            }}
+          />
+          <ActionButton
+            label={isSignedIn ? 'Sign Out' : 'Continue with Google'}
+            onPress={() => {
+              void (isSignedIn ? signOut() : signInWithGoogle());
             }}
           />
         </Surface>
@@ -44,12 +62,13 @@ export default function SettingsScreen() {
         <Surface style={styles.planCard}>
           <Text style={styles.planTitle}>WouldYouIQ Pro</Text>
           <Text style={styles.planBody}>
-            Supabase auth, sync, and payments are intentionally paused for this frontend pass.
+            Local changes always save on-device first. When signed in, a cloud save runs every 5 minutes or anytime you tap Save.
           </Text>
         </Surface>
 
         <ActionButton label="Reset Demo Data" onPress={resetApp} />
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       <Sheet open={sheetOpen} title="Profile" onClose={() => setSheetOpen(false)}>
         <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" />
@@ -71,6 +90,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg,
   },
+  content: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Layout.readingMaxWidth,
+    alignSelf: 'center',
+  },
+  contentDesktop: {
+    paddingTop: 8,
+  },
   scroll: {
     paddingHorizontal: 18,
     paddingBottom: 120,
@@ -80,6 +108,9 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     gap: 12,
+    maxWidth: 760,
+    alignSelf: 'center',
+    width: '100%',
   },
   avatar: {
     width: 72,
@@ -90,6 +121,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.b2,
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarLabel: {
     fontFamily: Fonts.display,
@@ -111,10 +147,12 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     gap: 12,
+    width: '100%',
   },
   planCard: {
     padding: 18,
     gap: 8,
+    width: '100%',
   },
   planTitle: {
     fontFamily: Fonts.display,

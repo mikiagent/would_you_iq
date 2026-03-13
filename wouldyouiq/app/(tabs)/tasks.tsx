@@ -2,14 +2,17 @@ import { router } from 'expo-router';
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { ActionButton, Badge, Fab, Field, PageHeader, SegmentedControl, Sheet, Surface, ToggleRow } from '@/components/primitives';
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { buildTaskInsights, filterTasks, getTaskEloTone, getTaskProgress, medalForIndex } from '@/domain/logic';
 import { useAppStore } from '@/domain/store';
@@ -37,6 +40,7 @@ function blankDraft(): TaskDraft {
 }
 
 export default function TasksScreen() {
+  const { width } = useWindowDimensions();
   const tasks = useAppStore((state) => state.tasks);
   const taskFilter = useAppStore((state) => state.taskFilter);
   const tasksView = useAppStore((state) => state.tasksView);
@@ -69,6 +73,7 @@ export default function TasksScreen() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedSubtask, setSelectedSubtask] = useState<{ taskId: string; subtaskId: string } | null>(null);
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   const list = useMemo(() => filterTasks(tasks, taskFilter), [taskFilter, tasks]);
   const insights = useMemo(() => buildTaskInsights(tasks), [tasks]);
@@ -110,19 +115,20 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.root}>
-      <PageHeader title="Tasks 📋" />
-      <SegmentedControl
-        items={[
-          { label: '📋 List', value: 'list' },
-          { label: '🎯 Insights', value: 'insights' },
-        ]}
-        value={tasksView}
-        onChange={setTasksView}
-      />
+      <View style={[styles.content, desktop && styles.contentDesktop]}>
+        <PageHeader title="Tasks 📋" />
+        <SegmentedControl
+          items={[
+            { label: '📋 List', value: 'list' },
+            { label: '🎯 Insights', value: 'insights' },
+          ]}
+          value={tasksView}
+          onChange={setTasksView}
+        />
 
-      {tasksView === 'list' ? (
-        <>
-          <ScrollView contentContainerStyle={styles.scroll}>
+        {tasksView === 'list' ? (
+          <>
+            <ScrollView contentContainerStyle={styles.scroll}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -343,13 +349,13 @@ export default function TasksScreen() {
                 </Surface>
               );
             })}
-          </ScrollView>
-          {!sheetOpen && expandedTaskIds.length === 0 ? <Fab onPress={openCreate} /> : null}
-        </>
-      ) : null}
+            </ScrollView>
+            {!sheetOpen && expandedTaskIds.length === 0 ? <Fab onPress={openCreate} /> : null}
+          </>
+        ) : null}
 
-      {tasksView === 'insights' ? (
-        <View style={styles.insightsWrap}>
+        {tasksView === 'insights' ? (
+          <View style={styles.insightsWrap}>
           {activeInsight ? (
             <>
               <View style={styles.dots}>
@@ -394,8 +400,9 @@ export default function TasksScreen() {
               <Text style={styles.emptySub}>Complete a few comparisons and we’ll surface patterns here.</Text>
             </Surface>
           )}
-        </View>
-      ) : null}
+          </View>
+        ) : null}
+      </View>
 
       <Sheet
         open={sheetOpen}
@@ -535,6 +542,15 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
+  },
+  content: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Layout.contentMaxWidth,
+    alignSelf: 'center',
+  },
+  contentDesktop: {
+    paddingTop: 8,
   },
   scroll: {
     paddingHorizontal: 18,

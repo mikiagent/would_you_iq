@@ -4,15 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { CompletionOverlay } from '@/components/CompletionOverlay';
 import { ActionButton, Badge, SegmentedControl, Surface } from '@/components/primitives';
 import { useXpOverlay } from '@/components/XpOverlay';
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { getLevelInfo } from '@/domain/logic';
 import { useAppStore } from '@/domain/store';
@@ -21,6 +24,7 @@ import type { ArenaSwipe, BudgetItem, Task } from '@/domain/models';
 type ArenaItem = Task | BudgetItem;
 
 export default function CalibrateScreen() {
+  const { width } = useWindowDimensions();
   const tasks = useAppStore((state) => state.tasks);
   const budget = useAppStore((state) => state.budget);
   const arena = useAppStore((state) => state.arena);
@@ -33,6 +37,7 @@ export default function CalibrateScreen() {
 
   const [activeDirection, setActiveDirection] = useState<ArenaSwipe | null>(null);
   const [levelBannerVisible, setLevelBannerVisible] = useState(false);
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   const champion = (
     arena.mode === 'tasks'
@@ -213,16 +218,18 @@ export default function CalibrateScreen() {
   if (!challenger || !champion) {
     return (
       <View style={styles.root}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>WouldYouIQ</Text>
+        <View style={[styles.content, desktop && styles.contentDesktop]}>
+          <View style={styles.header}>
+            <Text style={styles.logo}>WouldYouIQ</Text>
+          </View>
+          <Surface style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>All calibrated ✨</Text>
+            <Text style={styles.emptySub}>
+              Add more tasks or budget items to keep the arena going.
+            </Text>
+            <ActionButton label="Go to Tasks" tone="primary" onPress={() => router.push('/(tabs)/tasks')} />
+          </Surface>
         </View>
-        <Surface style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>All calibrated ✨</Text>
-          <Text style={styles.emptySub}>
-            Add more tasks or budget items to keep the arena going.
-          </Text>
-          <ActionButton label="Go to Tasks" tone="primary" onPress={() => router.push('/(tabs)/tasks')} />
-        </Surface>
       </View>
     );
   }
@@ -232,107 +239,111 @@ export default function CalibrateScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>WouldYouIQ</Text>
-        <Animated.View style={[styles.levelBlock, { transform: [{ scale: levelPulse }] }]}>
-          <View style={styles.levelRow}>
-            <Text style={styles.levelLabel}>Level {levelInfo.level}</Text>
-            <Text style={styles.levelMeta}>
-              {levelInfo.current}/{levelInfo.needed} XP
-            </Text>
+      <View style={[styles.content, desktop && styles.contentDesktop]}>
+        <View style={styles.header}>
+          <Text style={styles.logo}>WouldYouIQ</Text>
+          <Animated.View style={[styles.levelBlock, { transform: [{ scale: levelPulse }] }]}>
+            <View style={styles.levelRow}>
+              <Text style={styles.levelLabel}>Level {levelInfo.level}</Text>
+              <Text style={styles.levelMeta}>
+                {levelInfo.current}/{levelInfo.needed} XP
+              </Text>
+            </View>
+            <View style={styles.streakInline}>
+              <Text style={styles.streakInlineEmoji}>🔥</Text>
+              <Text style={styles.streakInlineLabel}>{user.streak} day streak</Text>
+            </View>
+            <View style={styles.levelTrack}>
+              <View style={[styles.levelFill, { width: `${Math.max(6, levelInfo.progress * 100)}%` }]} />
+            </View>
+            {levelBannerVisible ? <Text style={styles.levelBanner}>Level Up!</Text> : null}
+          </Animated.View>
+          <View style={styles.modeWrap}>
+            <SegmentedControl
+              items={[
+                { label: '📋 Tasks', value: 'tasks' },
+                { label: '💰 Budget', value: 'budget' },
+              ]}
+              value={arena.mode}
+              onChange={setArenaMode}
+            />
           </View>
-          <View style={styles.streakInline}>
-            <Text style={styles.streakInlineEmoji}>🔥</Text>
-            <Text style={styles.streakInlineLabel}>{user.streak} day streak</Text>
-          </View>
-          <View style={styles.levelTrack}>
-            <View style={[styles.levelFill, { width: `${Math.max(6, levelInfo.progress * 100)}%` }]} />
-          </View>
-          {levelBannerVisible ? <Text style={styles.levelBanner}>Level Up!</Text> : null}
-        </Animated.View>
-        <View style={styles.modeWrap}>
-          <SegmentedControl
-            items={[
-              { label: '📋 Tasks', value: 'tasks' },
-              { label: '💰 Budget', value: 'budget' },
-            ]}
-            value={arena.mode}
-            onChange={setArenaMode}
-          />
         </View>
-      </View>
 
-      <View style={styles.progressRow}>
-        {[0, 1, 2].map((step) => (
-          <View key={step} style={styles.progressTrack}>
-            <View style={[styles.progressDot, arena.progress > step && styles.progressDotActive]} />
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.question}>
-        <Text style={styles.questionLabel}>Do you agree with this statement?</Text>
-        <View style={styles.statementTop}>
-          <Text style={styles.statementEmoji}>{challenger.e}</Text>
-          <Text style={styles.statementTitle}>{challenger.n}</Text>
+        <View style={styles.progressRow}>
+          {[0, 1, 2].map((step) => (
+            <View key={step} style={styles.progressTrack}>
+              <View style={[styles.progressDot, arena.progress > step && styles.progressDotActive]} />
+            </View>
+          ))}
         </View>
-        <View style={styles.statementCenter}>
-          <Text style={styles.statementArrow}>&gt;</Text>
-          <Text style={styles.statementHint}>(More Important)</Text>
-        </View>
-        <Animated.View style={[styles.statementBottom, { transform: [{ scale: championBounce }] }]}>
-          <Text style={styles.statementEmoji}>{champion.e}</Text>
-          <View style={styles.statementBottomText}>
-            <Text style={styles.statementTitle}>{champion.n}?</Text>
-          </View>
-        </Animated.View>
-      </View>
 
-      <View style={styles.arena}>
-        <Animated.View
-          {...responder.panHandlers}
-          style={[
-            styles.cardWrap,
-            {
-              transform: [...pan.getTranslateTransform(), { rotate }, { scale: cardIntro }],
-            },
-          ]}
-        >
-          <Surface
+        <View style={[styles.question, desktop && styles.questionDesktop]}>
+          <Text style={styles.questionLabel}>Do you agree with this statement?</Text>
+          <View style={styles.statementTop}>
+            <Text style={styles.statementEmoji}>{challenger.e}</Text>
+            <Text style={styles.statementTitle}>{challenger.n}</Text>
+          </View>
+          <View style={styles.statementCenter}>
+            <Text style={styles.statementArrow}>&gt;</Text>
+            <Text style={styles.statementHint}>(More Important)</Text>
+          </View>
+          <Animated.View style={[styles.statementBottom, { transform: [{ scale: championBounce }] }]}>
+            <Text style={styles.statementEmoji}>{champion.e}</Text>
+            <View style={styles.statementBottomText}>
+              <Text style={styles.statementTitle}>{champion.n}?</Text>
+            </View>
+          </Animated.View>
+        </View>
+
+        <View style={styles.arena}>
+          <Animated.View
+            {...responder.panHandlers}
             style={[
-              styles.card,
-              activeDirection === 'challenger' && styles.cardYes,
-              activeDirection === 'champion' && styles.cardNo,
-              activeDirection === 'essential' && styles.cardEssential,
+              styles.cardWrap,
+              desktop && styles.cardWrapDesktop,
+              {
+                transform: [...pan.getTranslateTransform(), { rotate }, { scale: cardIntro }],
+              },
             ]}
           >
-            <View style={styles.overlayWrap}>
-              {activeDirection === 'challenger' ? <Text style={styles.overlayYes}>✓ YES</Text> : null}
-              {activeDirection === 'champion' ? <Text style={styles.overlayNo}>✗ NO</Text> : null}
-              {activeDirection === 'skip' ? <Text style={styles.overlaySkip}>↑ SKIP</Text> : null}
-              {activeDirection === 'essential' ? <Text style={styles.overlayEssential}>⭐ ESSENTIAL</Text> : null}
-            </View>
-            <Animated.Text
+            <Surface
               style={[
-                styles.cardEmoji,
-                {
-                  transform: [{ rotate: idleRotate }, { translateY: idleTranslateY }],
-                },
+                styles.card,
+                desktop && styles.cardDesktop,
+                activeDirection === 'challenger' && styles.cardYes,
+                activeDirection === 'champion' && styles.cardNo,
+                activeDirection === 'essential' && styles.cardEssential,
               ]}
             >
-              {challenger.e}
-            </Animated.Text>
-            <Text style={styles.cardTitle}>{challenger.n}</Text>
-            <Text style={styles.cardMeta}>{challengerMeta}</Text>
-          </Surface>
-        </Animated.View>
-      </View>
+              <View style={styles.overlayWrap}>
+                {activeDirection === 'challenger' ? <Text style={styles.overlayYes}>✓ YES</Text> : null}
+                {activeDirection === 'champion' ? <Text style={styles.overlayNo}>✗ NO</Text> : null}
+                {activeDirection === 'skip' ? <Text style={styles.overlaySkip}>↑ SKIP</Text> : null}
+                {activeDirection === 'essential' ? <Text style={styles.overlayEssential}>⭐ ESSENTIAL</Text> : null}
+              </View>
+              <Animated.Text
+                style={[
+                  styles.cardEmoji,
+                  {
+                    transform: [{ rotate: idleRotate }, { translateY: idleTranslateY }],
+                  },
+                ]}
+              >
+                {challenger.e}
+              </Animated.Text>
+              <Text style={styles.cardTitle}>{challenger.n}</Text>
+              <Text style={styles.cardMeta}>{challengerMeta}</Text>
+            </Surface>
+          </Animated.View>
+        </View>
 
-      <View style={styles.swipeGuide}>
-        <GuideItem label="YES" icon="→" active={activeDirection === 'challenger'} tone="green" />
-        <GuideItem label="NO" icon="←" active={activeDirection === 'champion'} tone="danger" />
-        <GuideItem label="SKIP" icon="↑" active={activeDirection === 'skip'} tone="default" />
-        <GuideItem label="ESSENTIAL" icon="↓" active={activeDirection === 'essential'} tone="gold" />
+        <View style={styles.swipeGuide}>
+          <GuideItem label="YES" icon="→" active={activeDirection === 'challenger'} tone="green" />
+          <GuideItem label="NO" icon="←" active={activeDirection === 'champion'} tone="danger" />
+          <GuideItem label="SKIP" icon="↑" active={activeDirection === 'skip'} tone="default" />
+          <GuideItem label="ESSENTIAL" icon="↓" active={activeDirection === 'essential'} tone="gold" />
+        </View>
       </View>
       <CompletionOverlay
         visible={arena.completionVisible}
@@ -381,9 +392,20 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
+    paddingBottom: 24,
+  },
+  content: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Layout.readingMaxWidth,
+    alignSelf: 'center',
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 24,
+  },
+  contentDesktop: {
+    maxWidth: 1120,
+    paddingHorizontal: 28,
+    paddingTop: 20,
   },
   header: {
     gap: 10,
@@ -487,6 +509,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
+  questionDesktop: {
+    maxWidth: 760,
+    alignSelf: 'center',
+    marginBottom: 22,
+  },
   questionLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 11,
@@ -546,6 +573,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 350,
   },
+  cardWrapDesktop: {
+    maxWidth: 420,
+  },
   card: {
     minHeight: 340,
     borderRadius: 30,
@@ -559,6 +589,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
+  },
+  cardDesktop: {
+    minHeight: 390,
   },
   cardYes: {
     borderColor: 'rgba(52,211,153,0.55)',

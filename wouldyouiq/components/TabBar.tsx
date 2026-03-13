@@ -1,12 +1,20 @@
 import React from 'react';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { width } = useWindowDimensions();
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
+
+  if (desktop) {
+    return null;
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, desktop && styles.containerDesktop]}>
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         const { options } = descriptors[route.key];
@@ -35,7 +43,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         };
 
         return (
-          <Pressable key={route.key} onPress={onPress} style={styles.item}>
+          <Pressable key={route.key} onPress={onPress} style={[styles.item, desktop && styles.itemDesktop]}>
             <View style={styles.iconWrap}>{icon}</View>
             <Text style={[styles.label, isFocused && styles.labelActive]}>{label as string}</Text>
             <View style={[styles.underline, isFocused && styles.underlineActive]} />
@@ -55,10 +63,20 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.b1,
     backgroundColor: 'rgba(7,7,16,0.96)',
   },
+  containerDesktop: {
+    width: '100%',
+    maxWidth: Layout.contentMaxWidth,
+    alignSelf: 'center',
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  itemDesktop: {
+    maxWidth: 180,
   },
   iconWrap: {
     marginBottom: 2,
