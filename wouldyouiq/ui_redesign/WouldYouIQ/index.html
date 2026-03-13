@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>WouldYouIQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="cc"></canvas>
+<div class="amb"><span class="a"></span><span class="b"></span><span class="c"></span></div>
+<div class="done-flash" id="doneFlash"></div>
+<div class="toast" id="toast"><span id="toastIco"></span><div><div id="toastT" style="font-weight:800;font-size:13px;color:var(--gold)"></div><div id="toastS" style="font-size:10px;color:var(--t3);margin-top:1px"></div></div></div>
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-body" id="sheetBody"></div></div>
+<div id="comp-ov">
+  <div class="co-glow"></div>
+  <div class="co-badge" id="coBadge">🎯</div>
+  <div class="co-title">Priorities Updated!</div>
+  <div class="co-sub">Your choices are shaping your future ✨</div>
+  <div class="co-xp"><div style="font-size:26px">⚡</div><div><div class="co-xp-num" id="coXP">+75 XP</div><div style="font-size:10px;color:var(--t2);font-weight:700;letter-spacing:1px;text-transform:uppercase">Earned today</div></div></div>
+  <div class="co-streak"><div class="co-flame">🔥</div><div><div style="font-weight:800;font-size:14px;color:var(--gold2)" id="coStreak">8 Day Streak!</div><div style="font-size:10px;color:var(--t3);margin-top:1px">Come back tomorrow to keep it going</div></div></div>
+  <div style="display:flex;gap:10px;width:100%;max-width:300px;">
+  <button class="co-cta" style="flex:1;padding:14px 10px;font-size:13px;" onclick="keepGoing()">Keep Swiping ⚡</button>
+  <button class="co-cta" style="flex:1;padding:14px 10px;font-size:13px;background:var(--s2);box-shadow:none;border:1.5px solid var(--b2);color:var(--t2);" onclick="goFY()">My Priorities →</button>
+</div>
+</div>
+<div class="app">
+
+<!-- ONBOARDING — kept minimal, revisit later -->
+<div class="screen active" id="sc-ob" style="align-items:center;justify-content:center;gap:20px;padding:32px 24px;text-align:center;">
+  <div style="font-family:'Unbounded',sans-serif;font-weight:900;font-size:32px;background:linear-gradient(135deg,var(--v),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent">WouldYouIQ</div>
+  <div style="font-size:15px;color:var(--t2);line-height:1.6;max-width:280px">Discover your real priorities<br>through two-second choices.</div>
+  <input id="obNameInp" style="width:100%;max-width:320px;background:var(--s2);border:2px solid var(--b2);border-radius:16px;padding:14px 18px;color:var(--tx);font-family:'Figtree',sans-serif;font-size:16px;font-weight:600;outline:none;" placeholder="What's your name?">
+  <button onclick="finishOB()" style="width:100%;max-width:320px;background:linear-gradient(135deg,var(--v3),var(--v2),var(--v));border:none;border-radius:18px;padding:16px;font-family:'Figtree',sans-serif;font-weight:800;font-size:15px;color:#fff;cursor:pointer;box-shadow:0 8px 28px rgba(124,106,247,.4);">Let's go →</button>
+</div>
+
+<!-- TASKS -->
+<div class="screen" id="sc-tasks" style="flex-direction:column;">
+  <!-- sticky top -->
+  <div style="flex-shrink:0;padding:max(env(safe-area-inset-top,0px),44px) 18px 0">
+    <div class="page-title" style="margin-bottom:10px">Tasks 📋</div>
+  </div>
+  <!-- sub-tab strip -->
+  <div class="sub-tabs">
+    <button class="st-btn on" id="tst-list"    onclick="setTaskSubTab('list')">📋 List</button>
+    <button class="st-btn"    id="tst-insights" onclick="setTaskSubTab('insights')">🎯 Insights</button>
+  </div>
+  <!-- LIST sub-content -->
+  <div class="sub-content" id="taskListPane">
+    <div class="filter-bar">
+      <div class="fb on" onclick="setFilter('all',this)">All</div>
+      <div class="fb" onclick="setFilter('ess',this)">⭐ Essential</div>
+      <div class="fb" onclick="setFilter('due',this)">📅 Due Soon</div>
+      <div class="fb" onclick="setFilter('done',this)">✅ Done</div>
+    </div>
+    <div id="taskList"></div>
+  </div>
+  <!-- INSIGHTS sub-content (hidden by default) -->
+  <div id="taskInsightsPane" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;position:relative;">
+  </div>
+  <button class="fab" onclick="openAddTask()">＋</button>
+  <nav class="nav" id="navTasks">
+    <div class="nb active" onclick="go('tasks')"><div class="ni">📋</div>Tasks</div>
+    <div class="nb" onclick="go('cal')"><div class="ni">⚡</div>Would You?</div>
+    <div class="nb" onclick="go('fy')"><div class="ni">✨</div>For You</div>
+    <div class="nb" onclick="go('budget')"><div class="ni">💰</div>Budget</div>
+    <div class="nb" onclick="go('ins')"><div class="ni">⚙️</div>Settings</div>
+  </nav>
+</div>
+
+<!-- WOULD YOU? -->
+<div class="screen" id="sc-cal">
+  <div id="calHeader" style="flex-shrink:0;padding-top:max(env(safe-area-inset-top,0px),44px)">
+    <div class="cal-top">
+      <div class="cal-logo">WouldYouIQ</div>
+      <div class="mode-toggle" style="margin-left:auto">
+        <button class="mt-btn on" id="mtTasks" onclick="setCalMode('tasks')">📋 Tasks</button>
+        <button class="mt-btn" id="mtBudget" onclick="setCalMode('budget')">💰 Budget</button>
+      </div>
+    </div>
+    <div class="prog-row">
+      <div class="dot" id="d0"></div><div class="prog-line"><div class="prog-fill" id="pf0"></div></div>
+      <div class="dot" id="d1"></div><div class="prog-line"><div class="prog-fill" id="pf1"></div></div>
+      <div class="dot" id="d2"></div>
+    </div>
+
+  </div>
+  <!-- ARENA — single card Tinder layout -->
+  <div class="arena" id="arena">
+
+    <!-- Question line -->
+    <div class="q-line">
+      <div class="q-label" id="qLabel">Would you choose</div>
+      <div class="q-text" id="qText">
+        <span id="qChalName" class="q-nameA">Workout</span>
+        <span id="qDetail" class="q-detail">60 min</span>
+      </div>
+    </div>
+
+    <!-- Champion strip — persistent winner crown -->
+    <div class="champ-strip" id="champStrip">
+      <div class="champ-pill hidden" id="champPill">
+        <span class="champ-crown">👑</span>
+        <span class="champ-emoji" id="champEmoji">🏋️</span>
+        <span class="champ-name" id="champName">Workout</span>
+        <span class="champ-elo" id="champElo">1200</span>
+      </div>
+    </div>
+
+    <!-- Main challenger card -->
+    <div class="challenger-wrap">
+      <div class="challenger-card" id="chalCard">
+        <canvas class="card-cv" id="chalCv"></canvas>
+        <!-- Direction hint overlays -->
+        <div class="swipe-hint-overlay sho-yes" id="shoYes">✓ YES</div>
+        <div class="swipe-hint-overlay sho-no"  id="shoNo">✗ NO</div>
+        <div class="swipe-hint-overlay sho-skip" id="shoSkip">↑ SKIP</div>
+        <div class="swipe-hint-overlay sho-ess"  id="shoEss">⭐ ESSENTIAL</div>
+        <!-- Essential badge -->
+        <div class="ess-badge" id="essBadge">⭐</div>
+        <!-- Content -->
+        <div class="chal-emoji" id="chalEmoji">📚</div>
+        <div class="chal-name"  id="chalName">Study for Exam</div>
+        <div class="chal-meta"  id="chalMeta">45 min</div>
+      </div>
+    </div>
+
+    <!-- Swipe guide -->
+    <div class="swipe-guide">
+      <div class="sg-item yes" id="sgYes"><div class="sg-icon">→</div><div class="sg-lbl">Yes</div></div>
+      <div class="sg-item no"  id="sgNo" ><div class="sg-icon">←</div><div class="sg-lbl">No</div></div>
+      <div class="sg-item"     id="sgSkip"><div class="sg-icon">↑</div><div class="sg-lbl">Skip</div></div>
+      <div class="sg-item ess" id="sgEss" ><div class="sg-icon">↓</div><div class="sg-lbl">Essential</div></div>
+    </div>
+
+  </div>
+  <nav class="nav">
+    <div class="nb" onclick="go('tasks')"><div class="ni">📋</div>Tasks</div>
+    <div class="nb active" onclick="go('cal')"><div class="ni">⚡</div>Would You?</div>
+    <div class="nb" onclick="go('fy')"><div class="ni">✨</div>For You</div>
+    <div class="nb" onclick="go('budget')"><div class="ni">💰</div>Budget</div>
+    <div class="nb" onclick="go('ins')"><div class="ni">⚙️</div>Settings</div>
+  </nav>
+</div>
+
+<!-- FOR YOU -->
+<div class="screen" id="sc-fy">
+  <div class="fy-wrap" id="fyWrap"></div>
+  <div class="fy-tip" id="fyTip"><div style="font-size:18px;opacity:.38">↑</div><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3)">Swipe up to skip</div></div>
+  <nav class="nav">
+    <div class="nb" onclick="go('tasks')"><div class="ni">📋</div>Tasks</div>
+    <div class="nb" onclick="go('cal')"><div class="ni">⚡</div>Would You?</div>
+    <div class="nb active" onclick="go('fy')"><div class="ni">✨</div>For You</div>
+    <div class="nb" onclick="go('budget')"><div class="ni">💰</div>Budget</div>
+    <div class="nb" onclick="go('ins')"><div class="ni">⚙️</div>Settings</div>
+  </nav>
+</div>
+
+<!-- BUDGET -->
+<div class="screen" id="sc-budget" style="flex-direction:column;">
+  <div style="flex-shrink:0;padding:max(env(safe-area-inset-top,0px),44px) 18px 0">
+    <div class="page-title" style="margin-bottom:10px">Budget 💰</div>
+  </div>
+  <div class="sub-tabs">
+    <button class="st-btn on"  id="bst-overview"  onclick="setBudgetSubTab('overview')">📊 Overview</button>
+    <button class="st-btn"     id="bst-insights"  onclick="setBudgetSubTab('insights')">💡 Insights</button>
+  </div>
+  <div id="budgetOverviewPane" class="sub-content">
+    <div id="budgetScroll"></div>
+  </div>
+  <div id="budgetInsightsPane" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;position:relative;">
+  </div>
+  <button class="fab" onclick="openAddExp()">＋</button>
+  <nav class="nav">
+    <div class="nb" onclick="go('tasks')"><div class="ni">📋</div>Tasks</div>
+    <div class="nb" onclick="go('cal')"><div class="ni">⚡</div>Would You?</div>
+    <div class="nb" onclick="go('fy')"><div class="ni">✨</div>For You</div>
+    <div class="nb active" onclick="go('budget')"><div class="ni">💰</div>Budget</div>
+    <div class="nb" onclick="go('ins')"><div class="ni">⚙️</div>Settings</div>
+  </nav>
+</div>
+
+<!-- INSIGHTS -->
+<div class="screen" id="sc-ins">
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;" id="insOuter">
+    <div class="ins-top-bar"><div class="ins-title">Settings</div><div class="ins-top-actions"><div class="avatar" onclick="openProfile()" id="avatarBtn">?</div></div></div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 18px 20px;" id="insScroll"></div>
+  </div>
+  <nav class="nav">
+    <div class="nb" onclick="go('tasks')"><div class="ni">📋</div>Tasks</div>
+    <div class="nb" onclick="go('cal')"><div class="ni">⚡</div>Would You?</div>
+    <div class="nb" onclick="go('fy')"><div class="ni">✨</div>For You</div>
+    <div class="nb" onclick="go('budget')"><div class="ni">💰</div>Budget</div>
+    <div class="nb active" onclick="go('ins')"><div class="ni">⚙️</div>Settings</div>
+  </nav>
+</div>
+
+<!-- SUBTASK RUNNER SCREEN -->
+<div class="screen" id="sc-runner" style="background:var(--bg);">
+  <div class="fy-wrap" id="runnerWrap"></div>
+  <div class="fy-tip" id="runnerTip">
+    <div style="font-size:18px;opacity:.38">↑</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3)">Swipe up to skip</div>
+  </div>
+  <!-- no nav — modal-style, back button only -->
+</div>
+
+
+</div><!-- .app -->
+<script src="app.js"></script>
+</body>
+</html>

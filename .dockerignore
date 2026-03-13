@@ -1,0 +1,9 @@
+.git
+.gitignore
+.DS_Store
+.expo
+node_modules
+wouldyouiq/node_modules
+wouldyouiq/.expo
+wouldyouiq/dist
+wouldyouiq/.env.local
