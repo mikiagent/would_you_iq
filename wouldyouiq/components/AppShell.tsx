@@ -1,43 +1,55 @@
-import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import { useWindowDimensions } from 'react-native';
+import React, { ReactNode, useEffect, useRef } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+
+import { AmbientBackground } from '@/components/AmbientBackground';
+import { Toast } from '@/components/Toast';
 import { Colors } from '@/constants/tokens';
+import { useAppStore } from '@/domain/store';
+import { todayKey } from '@/domain/logic';
 
-const MAX_APP_WIDTH = 430;
+export function AppShell({ children }: { children: ReactNode }) {
+  const toast = useAppStore((state) => state.toast);
+  const clearToast = useAppStore((state) => state.clearToast);
+  const user = useAppStore((state) => state.user);
+  const showToast = useAppStore((state) => state.showToast);
+  const didNotifyRef = useRef(false);
 
-/**
- * Wraps the app so on desktop (web) the UI is constrained to a phone-width column (430px) centered.
- * Mobile-first: on native or narrow viewports, uses full width.
- */
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { width } = useWindowDimensions();
-  const isWide = Platform.OS === 'web' && width > MAX_APP_WIDTH;
+  useEffect(() => {
+    if (didNotifyRef.current) return;
+    if (user.lastCalibrationDate === todayKey()) return;
 
-  if (!isWide) {
-    return <View style={styles.flex}>{children}</View>;
-  }
+    didNotifyRef.current = true;
+    showToast({
+      icon: '🔥',
+      title: `Your ${user.streak}-day streak is ready`,
+      subtitle: 'Complete today’s calibration to keep it alive.',
+    });
+  }, [showToast, user.lastCalibrationDate, user.streak]);
 
   return (
-    <View style={styles.outer}>
-      <View style={styles.inner}>{children}</View>
+    <View style={styles.root}>
+      <StatusBar style="light" />
+      <AmbientBackground />
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.app}>{children}</View>
+      </SafeAreaView>
+      <Toast toast={toast} onDone={clearToast} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  outer: {
+  root: {
     flex: 1,
     backgroundColor: Colors.bg,
-    alignItems: 'center',
-    minHeight: Platform.OS === 'web' ? '100vh' : undefined,
   },
-  inner: {
+  safe: {
+    flex: 1,
+  },
+  app: {
+    flex: 1,
     width: '100%',
-    maxWidth: MAX_APP_WIDTH,
-    flex: 1,
-    backgroundColor: Colors.bg,
   },
 });

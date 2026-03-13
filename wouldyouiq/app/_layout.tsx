@@ -2,8 +2,7 @@ import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
-import 'react-native-reanimated';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   Unbounded_900Black,
@@ -14,15 +13,18 @@ import {
   Figtree_800ExtraBold,
 } from '@expo-google-fonts/figtree';
 
+import { AppShell } from '@/components/AppShell';
 import { Colors } from '@/constants/tokens';
+import { useAppStore } from '@/domain/store';
 
 SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
-  initialRouteName: 'onboarding',
+  initialRouteName: 'index',
 };
 
 export default function RootLayout() {
+  const hasHydrated = useAppStore((state) => state.hasHydrated);
   const [fontsLoaded, fontError] = useFonts({
     Unbounded_900Black,
     Figtree_400Regular,
@@ -35,14 +37,14 @@ export default function RootLayout() {
   }, [fontError]);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && hasHydrated) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, hasHydrated]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !hasHydrated) {
     return (
-      <View style={[styles.fullScreen, styles.loading]}>
+      <View style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.violet} />
       </View>
     );
@@ -50,11 +52,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.fullScreen}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="runner" />
-      </Stack>
+      <AppShell>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="runner" />
+        </Stack>
+      </AppShell>
     </GestureHandlerRootView>
   );
 }
@@ -62,12 +66,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   fullScreen: {
     flex: 1,
-    minHeight: Platform.OS === 'web' ? '100vh' : undefined,
     backgroundColor: Colors.bg,
   },
   loading: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.bg,
   },
 });
-

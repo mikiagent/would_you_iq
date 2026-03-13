@@ -1,7 +1,9 @@
 import { Redirect } from 'expo-router';
 
-export default function Index() {
-  // Default web path ("/") should go to onboarding
-  return <Redirect href="/onboarding" />;
-}
+import { useAppStore } from '@/domain/store';
 
+export default function Index() {
+  const completed = useAppStore((state) => state.onboarding.completed);
+
+  return <Redirect href={completed ? '/(tabs)/calibrate' : '/onboarding'} />;
+}

@@ -1,42 +1,67 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ActionButton, Field, PageHeader, Sheet, StatCard, Surface } from '@/components/primitives';
 import { Colors, Fonts } from '@/constants/tokens';
 import { useAppStore } from '@/domain/store';
 
 export default function SettingsScreen() {
-  const { user } = useAppStore();
+  const user = useAppStore((state) => state.user);
+  const updateUserName = useAppStore((state) => state.updateUserName);
+  const resetApp = useAppStore((state) => state.resetApp);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [name, setName] = useState(user.name);
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Settings</Text>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>⚡</Text>
-          <Text style={styles.statValue}>{user.xp}</Text>
-          <Text style={styles.statLabel}>Total XP</Text>
+      <PageHeader title="Settings" />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Surface style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarLabel}>{user.name.slice(0, 1).toUpperCase()}</Text>
+          </View>
+          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileSub}>Frontend-only build. Supabase profile sync will slot in later.</Text>
+          <ActionButton
+            label="Edit Profile"
+            tone="primary"
+            onPress={() => {
+              setName(user.name);
+              setSheetOpen(true);
+            }}
+          />
+        </Surface>
+
+        <View style={styles.statsGrid}>
+          <StatCard icon="⚡" value={String(user.xp)} label="Total XP" />
+          <StatCard icon="🔥" value={String(user.streak)} label="Day Streak" />
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>🔥</Text>
-          <Text style={styles.statValue}>{user.streak}</Text>
-          <Text style={styles.statLabel}>Day Streak</Text>
+        <View style={styles.statsGrid}>
+          <StatCard icon="🧩" value={String(user.comparisons)} label="Comparisons" />
+          <StatCard icon="✅" value={String(user.done)} label="Tasks Done" />
         </View>
-      </View>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>🧩</Text>
-          <Text style={styles.statValue}>{user.comparisons}</Text>
-          <Text style={styles.statLabel}>Comparisons</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>✅</Text>
-          <Text style={styles.statValue}>{user.done}</Text>
-          <Text style={styles.statLabel}>Tasks Done</Text>
-        </View>
-      </View>
-      <View style={styles.planCard}>
-        <Text style={styles.planTitle}>Free Plan</Text>
-        <Text style={styles.planText}>Pro with Supabase + Stripe coming soon.</Text>
-      </View>
+
+        <Surface style={styles.planCard}>
+          <Text style={styles.planTitle}>WouldYouIQ Pro</Text>
+          <Text style={styles.planBody}>
+            Supabase auth, sync, and payments are intentionally paused for this frontend pass.
+          </Text>
+        </Surface>
+
+        <ActionButton label="Reset Demo Data" onPress={resetApp} />
+      </ScrollView>
+
+      <Sheet open={sheetOpen} title="Profile" onClose={() => setSheetOpen(false)}>
+        <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" />
+        <ActionButton
+          label="Save"
+          tone="primary"
+          onPress={() => {
+            updateUserName(name);
+            setSheetOpen(false);
+          }}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -45,61 +70,61 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.bg,
-    paddingTop: 64,
+  },
+  scroll: {
     paddingHorizontal: 18,
+    paddingBottom: 120,
+    gap: 14,
   },
-  title: {
-    fontFamily: Fonts.display,
-    fontSize: 22,
-    color: Colors.t1,
-    marginBottom: 16,
+  profileCard: {
+    padding: 20,
+    alignItems: 'center',
+    gap: 12,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: Colors.s1,
-    borderWidth: 1,
-    borderColor: Colors.b1,
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  statEmoji: {
-    fontSize: 22,
-  },
-  statValue: {
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    color: Colors.t1,
-  },
-  statLabel: {
-    fontFamily: Fonts.body,
-    fontSize: 11,
-    color: Colors.t3,
-  },
-  planCard: {
-    marginTop: 16,
-    borderRadius: 18,
-    padding: 16,
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.b2,
   },
-  planTitle: {
+  avatarLabel: {
     fontFamily: Fonts.display,
-    fontSize: 16,
-    color: Colors.gold,
-    marginBottom: 4,
+    fontSize: 28,
+    color: Colors.t1,
   },
-  planText: {
-    fontFamily: Fonts.body,
+  profileName: {
+    fontFamily: Fonts.display,
+    fontSize: 24,
+    color: Colors.t1,
+  },
+  profileSub: {
+    fontFamily: Fonts.bodyLight,
     fontSize: 13,
     color: Colors.t2,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  planCard: {
+    padding: 18,
+    gap: 8,
+  },
+  planTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    color: Colors.gold,
+  },
+  planBody: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 14,
+    color: Colors.t2,
+    lineHeight: 22,
   },
 });
-
