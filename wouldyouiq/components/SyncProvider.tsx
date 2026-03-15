@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import React, {
   createContext,
   useCallback,
@@ -18,6 +19,16 @@ import { useAppStore } from '@/domain/store';
 import { supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
+
+function getAuthRedirectUrl() {
+  if (Platform.OS === 'web') {
+    return Linking.createURL('auth/callback');
+  }
+
+  return Linking.createURL('auth/callback', {
+    scheme: 'wouldyouiq',
+  });
+}
 
 type SaveState = 'saved' | 'unsaved' | 'saving' | 'error' | 'local';
 
@@ -275,7 +286,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [isDirty, isSaving, isSignedIn, manualSave]);
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = Linking.createURL('auth/callback');
+    const redirectTo = getAuthRedirectUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

@@ -3,6 +3,9 @@
     "name": "wouldyouiq",
     "slug": "wouldyouiq",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wouldyouiq",
@@ -13,7 +16,12 @@
       "backgroundColor": "#07070d"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.wouldyouiq",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -35,6 +43,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1396a174-e222-43d3-af94-f9c4097bb691"
+      }
     }
   }
 }

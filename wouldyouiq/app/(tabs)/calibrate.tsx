@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
@@ -152,7 +152,7 @@ export default function CalibrateScreen() {
     }).start();
   };
 
-  const finishSwipe = (swipe: ArenaSwipe) => {
+  const finishSwipe = useCallback((swipe: ArenaSwipe) => {
     const toValue =
       swipe === 'challenger'
         ? { x: 460, y: 30 }
@@ -178,7 +178,45 @@ export default function CalibrateScreen() {
       pan.setValue({ x: 0, y: 0 });
       setActiveDirection(null);
     });
-  };
+  }, [commitArenaSwipe, pan, triggerXp]);
+
+  useEffect(() => {
+    if (!desktop || !challenger || !champion || typeof window === 'undefined') {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreKeyboardEvent(event)) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        finishSwipe('champion');
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        finishSwipe('challenger');
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        finishSwipe('skip');
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        finishSwipe('essential');
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [challenger, champion, desktop, finishSwipe]);
 
   const responder = useRef(
     PanResponder.create({
@@ -344,6 +382,11 @@ export default function CalibrateScreen() {
           <GuideItem label="SKIP" icon="↑" active={activeDirection === 'skip'} tone="default" />
           <GuideItem label="ESSENTIAL" icon="↓" active={activeDirection === 'essential'} tone="gold" />
         </View>
+        {desktop ? (
+          <Text style={styles.desktopHint}>
+            Desktop controls: left and right choose, up skips, and down marks essential.
+          </Text>
+        ) : null}
       </View>
       <CompletionOverlay
         visible={arena.completionVisible}
@@ -357,6 +400,19 @@ export default function CalibrateScreen() {
       />
       {xpOverlay}
     </View>
+  );
+}
+
+function shouldIgnoreKeyboardEvent(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target) return false;
+
+  const tagName = target.tagName?.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select'
   );
 }
 
@@ -649,6 +705,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 6,
     marginBottom: 14,
+  },
+  desktopHint: {
+    marginBottom: 14,
+    fontFamily: Fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.t2,
+    textAlign: 'center',
   },
   guideItem: {
     alignItems: 'center',

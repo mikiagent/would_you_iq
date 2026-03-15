@@ -16,8 +16,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.container, desktop && styles.containerDesktop]}>
       {state.routes.map((route, index) => {
+        if (route.name === 'ai-magic') {
+          return null;
+        }
+
         const isFocused = state.index === index;
         const { options } = descriptors[route.key];
+        if ((options as { href?: string | null }).href === null) {
+          return null;
+        }
         const label =
           options.tabBarLabel !== undefined
             ? options.tabBarLabel

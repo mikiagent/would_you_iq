@@ -182,6 +182,59 @@ export default function ForYouScreen() {
     });
   }, [cardY, queue.length, resetCardOffset, skipLocked, task]);
 
+  const runPrimaryAction = useCallback(() => {
+    if (!task) return;
+
+    if (task.subtasks.length) {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      startRunner(task.id);
+      router.navigate({ pathname: '/runner', params: { taskId: task.id } });
+      return;
+    }
+
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    triggerConfetti({ count: 90 });
+    toggleTaskDone(task.id);
+  }, [startRunner, task, toggleTaskDone, triggerConfetti]);
+
+  useEffect(() => {
+    if (!desktop || !task || typeof window === 'undefined') {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreKeyboardEvent(event)) {
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        skipTask();
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        runPrimaryAction();
+        return;
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault();
+        runPrimaryAction();
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setDetailOpen((value) => !value);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [desktop, runPrimaryAction, skipTask, task]);
+
   const resetCardPosition = useCallback(() => {
     Animated.spring(cardY, {
       toValue: 0,
@@ -266,8 +319,15 @@ export default function ForYouScreen() {
     <View style={styles.root}>
       <View style={[styles.content, desktop && styles.contentDesktop]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>For You</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>For You</Text>
+            <Pressable style={styles.magicButton} onPress={() => router.push('/(tabs)/ai-magic')}>
+              <Text style={styles.magicButtonLabel}>✨ AI Magic</Text>
+            </Pressable>
+          </View>
         </View>
+        <View style={[styles.desktopBody, desktop && styles.desktopBodyActive]}>
+        <View style={[styles.mainColumn, desktop && styles.mainColumnDesktop]}>
         {nextTask ? (
           <Animated.View
             pointerEvents="none"
@@ -374,18 +434,7 @@ export default function ForYouScreen() {
               <ActionButton
                 label={task.subtasks.length ? '▶ Start' : '✅ Done'}
                 tone="success"
-                onPress={() => {
-                  if (task.subtasks.length) {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    startRunner(task.id);
-                    router.navigate({ pathname: '/runner', params: { taskId: task.id } });
-                    return;
-                  }
-
-                  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  triggerConfetti({ count: 90 });
-                  toggleTaskDone(task.id);
-                }}
+                onPress={runPrimaryAction}
               />
               <ActionButton label={skipLocked ? 'Skipping…' : '⏭ Skip'} onPress={skipTask} />
             </View>
@@ -394,11 +443,30 @@ export default function ForYouScreen() {
 
         <View style={styles.tip}>
           <Text style={styles.tipArrow}>↑</Text>
-          <Text style={styles.tipLabel}>Swipe up to skip</Text>
+          <Text style={styles.tipLabel}>
+            {desktop
+              ? 'Space starts or finishes, up skips. In subtasks, left/right move between steps.'
+              : 'Swipe up to skip'}
+          </Text>
+        </View>
+        </View>
         </View>
       </View>
       {confettiOverlay}
     </View>
+  );
+}
+
+function shouldIgnoreKeyboardEvent(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target) return false;
+
+  const tagName = target.tagName?.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select'
   );
 }
 
@@ -473,13 +541,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 8,
   },
+  desktopBody: {
+    flex: 1,
+  },
+  desktopBodyActive: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainColumn: {
+    flex: 1,
+    position: 'relative',
+  },
+  mainColumnDesktop: {
+    maxWidth: 700,
+    alignSelf: 'center',
+  },
   header: {
     paddingTop: 12,
     marginBottom: 12,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   headerTitle: {
     fontFamily: Fonts.display,
     fontSize: 22,
+    color: Colors.t1,
+  },
+  magicButton: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.28)',
+    backgroundColor: 'rgba(124,106,247,0.16)',
+  },
+  magicButtonLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 12,
     color: Colors.t1,
   },
   cardWrap: {
@@ -488,9 +590,9 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   cardWrapDesktop: {
-    maxWidth: 860,
+    maxWidth: 700,
     alignSelf: 'center',
-    marginTop: 56,
+    marginTop: 48,
   },
   cardStackPreview: {
     position: 'absolute',
@@ -500,9 +602,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   cardStackPreviewDesktop: {
-    left: 28,
-    right: 28,
-    top: 176,
+    left: 0,
+    right: 0,
+    top: 164,
   },
   card: {
     minHeight: 540,
@@ -512,7 +614,7 @@ const styles = StyleSheet.create({
   },
   cardDesktop: {
     minHeight: 600,
-    paddingHorizontal: 48,
+    paddingHorizontal: 40,
     paddingVertical: 40,
   },
   previewCard: {

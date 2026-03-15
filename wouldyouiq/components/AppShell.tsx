@@ -13,6 +13,8 @@ import {
 import { usePathname, useRouter } from 'expo-router';
 
 import { AmbientBackground } from '@/components/AmbientBackground';
+import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
+import { GuidedTour } from '@/components/GuidedTour';
 import { SyncProvider, useCloudSync } from '@/components/SyncProvider';
 import { Toast } from '@/components/Toast';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -56,6 +58,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         {desktop ? <DesktopShell>{children}</DesktopShell> : <View style={styles.app}>{children}</View>}
       </SafeAreaView>
+      <GuidedTour />
       <Toast toast={toast} onDone={clearToast} />
     </View>
   );
@@ -64,6 +67,8 @@ function AppShellInner({ children }: { children: ReactNode }) {
 function DesktopShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const startGuidedTour = useAppStore((state) => state.startGuidedTour);
+  const tasks = useAppStore((state) => state.tasks);
   const { avatarUrl, displayName, email, isSignedIn } = useCloudSync();
   const showTabsChrome = pathname !== '/onboarding' && pathname !== '/runner';
   const initials = useMemo(() => {
@@ -128,27 +133,42 @@ function DesktopShell({ children }: { children: ReactNode }) {
       <View style={styles.desktopMain}>
         <View style={styles.desktopTopBar}>
           <View />
-          <View style={styles.desktopProfileChip}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.desktopAvatar} />
-            ) : (
-              <View style={[styles.desktopAvatar, styles.desktopAvatarFallback]}>
-                <Text style={styles.desktopAvatarInitials}>{initials}</Text>
+          <View style={styles.desktopTopActions}>
+            <Pressable
+              onPress={() => {
+                startGuidedTour();
+                router.replace('/tasks' as never);
+              }}
+              style={styles.desktopTutorialButton}
+            >
+              <Text style={styles.desktopTutorialIcon}>?</Text>
+              <Text style={styles.desktopTutorialLabel}>Tutorial</Text>
+            </Pressable>
+            <View style={styles.desktopProfileChip}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.desktopAvatar} />
+              ) : (
+                <View style={[styles.desktopAvatar, styles.desktopAvatarFallback]}>
+                  <Text style={styles.desktopAvatarInitials}>{initials}</Text>
+                </View>
+              )}
+              <View style={styles.desktopProfileMeta}>
+                <Text style={styles.desktopProfileName} numberOfLines={1}>
+                  {displayName || 'Local mode'}
+                </Text>
+                <Text style={styles.desktopProfileSub} numberOfLines={1}>
+                  {isSignedIn ? email || 'Connected' : 'Offline first'}
+                </Text>
               </View>
-            )}
-            <View style={styles.desktopProfileMeta}>
-              <Text style={styles.desktopProfileName} numberOfLines={1}>
-                {displayName || 'Local mode'}
-              </Text>
-              <Text style={styles.desktopProfileSub} numberOfLines={1}>
-                {isSignedIn ? email || 'Connected' : 'Offline first'}
-              </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.desktopContentFrame}>
           <View style={styles.desktopContent}>{children}</View>
+        </View>
+        <View style={styles.desktopFloatingRail}>
+          <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
         </View>
       </View>
     </View>
@@ -259,7 +279,7 @@ const styles = StyleSheet.create({
   desktopMain: {
     flex: 1,
     gap: 16,
-    paddingRight: 90,
+    position: 'relative',
   },
   desktopTopBar: {
     height: 64,
@@ -267,8 +287,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  desktopProfileChip: {
+  desktopTopActions: {
     marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  desktopTutorialButton: {
+    minHeight: 46,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(124,106,247,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.24)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  desktopTutorialIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    textAlign: 'center',
+    overflow: 'hidden',
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+    lineHeight: 20,
+    color: Colors.t1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  desktopTutorialLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+    color: Colors.t1,
+  },
+  desktopProfileChip: {
     maxWidth: 320,
     minHeight: 54,
     borderRadius: 999,
@@ -313,13 +366,20 @@ const styles = StyleSheet.create({
   },
   desktopContentFrame: {
     flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'flex-start',
+    paddingRight: 360,
   },
   desktopContent: {
     flex: 1,
     width: '100%',
     maxWidth: 1120,
+  },
+  desktopFloatingRail: {
+    position: 'absolute',
+    right: 0,
+    top: 78,
   },
   desktopStandalone: {
     flex: 1,

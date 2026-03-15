@@ -29,6 +29,7 @@ import type {
   BudgetInsight,
   BudgetView,
   ExpenseDraft,
+  GuidedTourState,
   OnboardingOption,
   Task,
   TaskDraft,
@@ -42,11 +43,18 @@ import type {
 type RunnerAction = 'done' | 'skip';
 const COMPLETION_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
-type PersistedState = Pick<AppStore, 'user' | 'tasks' | 'budget' | 'onboarding' | 'arena' | 'runner'>;
+type PersistedState = Pick<AppStore, 'user' | 'tasks' | 'budget' | 'onboarding' | 'arena' | 'runner' | 'guidedTour'>;
+
+const initialGuidedTourState: GuidedTourState = {
+  active: false,
+  step: 0,
+  completed: false,
+};
 
 export interface AppStore extends AppSnapshot {
   hasHydrated: boolean;
   toast: ToastState | null;
+  guidedTour: GuidedTourState;
   tasksView: TasksView;
   budgetView: BudgetView;
   taskFilter: TaskFilter;
@@ -90,6 +98,10 @@ export interface AppStore extends AppSnapshot {
   ensureArenaReady: () => void;
   commitArenaSwipe: (swipe: ArenaSwipe) => void;
   dismissCompletionOverlay: () => void;
+  startGuidedTour: () => void;
+  nextGuidedTourStep: (totalSteps: number) => void;
+  previousGuidedTourStep: () => void;
+  endGuidedTour: () => void;
 }
 
 const snapshot = mockRepository.loadSnapshot();
@@ -100,6 +112,7 @@ export const useAppStore = create<AppStore>()(
       ...snapshot,
       hasHydrated: false,
       toast: null,
+      guidedTour: initialGuidedTourState,
       tasksView: 'list',
       budgetView: 'overview',
       taskFilter: 'all',
@@ -122,7 +135,12 @@ export const useAppStore = create<AppStore>()(
             ? state.expandedTaskIds.filter((id) => id !== taskId)
             : [...state.expandedTaskIds, taskId],
         })),
-      resetApp: () => set(() => ({ ...mockRepository.loadSnapshot(), toast: null })),
+      resetApp: () =>
+        set(() => ({
+          ...mockRepository.loadSnapshot(),
+          toast: null,
+          guidedTour: initialGuidedTourState,
+        })),
       setOnboardingName: (value) =>
         set((state) => ({
           onboarding: {
@@ -879,6 +897,51 @@ export const useAppStore = create<AppStore>()(
             completionVisible: false,
           },
         })),
+      startGuidedTour: () =>
+        set({
+          guidedTour: {
+            active: true,
+            step: 0,
+            completed: false,
+          },
+        }),
+      nextGuidedTourStep: (totalSteps) =>
+        set((state) => {
+          const nextStep = state.guidedTour.step + 1;
+          if (nextStep >= totalSteps) {
+            return {
+              guidedTour: {
+                active: false,
+                step: totalSteps - 1,
+                completed: true,
+              },
+            };
+          }
+
+          return {
+            guidedTour: {
+              ...state.guidedTour,
+              active: true,
+              step: nextStep,
+            },
+          };
+        }),
+      previousGuidedTourStep: () =>
+        set((state) => ({
+          guidedTour: {
+            ...state.guidedTour,
+            active: true,
+            step: Math.max(0, state.guidedTour.step - 1),
+          },
+        })),
+      endGuidedTour: () =>
+        set((state) => ({
+          guidedTour: {
+            active: false,
+            step: state.guidedTour.step,
+            completed: true,
+          },
+        })),
     }),
     {
       name: 'wouldyouiq-v10-front-end',
@@ -891,6 +954,7 @@ export const useAppStore = create<AppStore>()(
         onboarding: state.onboarding,
         arena: state.arena,
         runner: state.runner,
+        guidedTour: state.guidedTour,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { DonutChart } from '@/components/DonutChart';
+import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
 import { ActionButton, Badge, Fab, Field, PageHeader, SegmentedControl, Sheet, Surface, ToggleRow } from '@/components/primitives';
 import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import {
-  alignmentScore,
   budgetSegments,
   budgetTotals,
   buildBudgetInsights,
@@ -31,6 +31,7 @@ function blankExpense(): ExpenseDraft {
 export default function BudgetScreen() {
   const { width } = useWindowDimensions();
   const budget = useAppStore((state) => state.budget);
+  const tasks = useAppStore((state) => state.tasks);
   const budgetView = useAppStore((state) => state.budgetView);
   const setBudgetView = useAppStore((state) => state.setBudgetView);
   const saveExpense = useAppStore((state) => state.saveExpense);
@@ -52,7 +53,6 @@ export default function BudgetScreen() {
   const insights = buildBudgetInsights(budget);
   const activeInsight = insights[insightIndex] ?? null;
   const flaggedIds = new Set(getBudgetFlaggedItems(budget).map((item) => item.id));
-  const score = alignmentScore(budget);
 
   useEffect(() => {
     if (insightIndex >= insights.length) {
@@ -77,50 +77,77 @@ export default function BudgetScreen() {
           value={budgetView}
           onChange={setBudgetView}
         />
-
         {budgetView === 'overview' ? (
           <>
             <ScrollView contentContainerStyle={styles.scroll}>
-            <Surface style={styles.incomeCard}>
-              <Text style={styles.sectionLabel}>Monthly Income</Text>
-              <View style={styles.incomeRow}>
-                <Text style={styles.incomeValue}>${budget.income.toLocaleString()}</Text>
-                <Pressable onPress={() => {
-                  setIncomeDraft(String(budget.income));
-                  setIncomeSheetOpen(true);
-                }}>
-                  <Text style={styles.link}>Edit ✎</Text>
-                </Pressable>
+            <Surface style={[styles.heroCard, desktop && styles.heroCardDesktop]}>
+              <View style={styles.heroHeader}>
+                <View>
+                  <Text style={styles.sectionLabel}>Monthly Budget</Text>
+                  <Text style={styles.heroTitle}>Spending breakdown</Text>
+                  <Text style={styles.heroSub}>
+                    The donut and category totals are the fastest way to read where this month is going.
+                  </Text>
+                </View>
+                <Badge
+                  label={totals.overspend ? 'Over budget' : `${totals.spentPercent}% spent`}
+                  tone={totals.overspend ? 'danger' : 'violet'}
+                />
+              </View>
+
+              <View style={[styles.heroBody, desktop && styles.heroBodyDesktop]}>
+                <View style={styles.chartPanel}>
+                  <DonutChart spentPercent={totals.spentPercent} segments={segments} size={desktop ? 280 : 230} />
+                </View>
+
+                <View style={styles.breakdownPanel}>
+                  <View style={styles.summaryGrid}>
+                    <Surface style={styles.summaryCard}>
+                      <Text style={styles.sectionLabel}>Monthly Income</Text>
+                      <View style={styles.incomeRow}>
+                        <Text style={styles.incomeValue}>${budget.income.toLocaleString()}</Text>
+                        <Pressable onPress={() => {
+                          setIncomeDraft(String(budget.income));
+                          setIncomeSheetOpen(true);
+                        }}>
+                          <Text style={styles.link}>Edit ✎</Text>
+                        </Pressable>
+                      </View>
+                    </Surface>
+
+                    <Surface style={[styles.summaryCard, styles.leftoverCard, totals.overspend ? styles.leftoverNegative : styles.leftoverPositive]}>
+                      <Text style={styles.leftoverLabel}>{totals.overspend ? 'Over Budget' : 'Leftover / Save'}</Text>
+                      <Text style={[styles.leftoverValue, totals.overspend ? styles.leftoverValueNegative : null]}>
+                        ${(totals.overspend || totals.leftover).toLocaleString()}
+                      </Text>
+                      <Text style={styles.leftoverSub}>
+                        {totals.overspend ? 'You’re spending beyond your monthly income.' : 'After all monthly expenses.'}
+                      </Text>
+                    </Surface>
+                  </View>
+
+                  <Surface style={styles.legendCard}>
+                    <Text style={styles.sectionLabel}>Breakdown</Text>
+                    <View style={styles.legend}>
+                      {segments.map((segment) => (
+                        <View key={segment.key} style={styles.legendRow}>
+                          <View style={styles.legendMain}>
+                            <View style={[styles.legendDot, { backgroundColor: segment.color }]} />
+                            <Text style={styles.legendLabel}>{segment.label}</Text>
+                          </View>
+                          <View style={styles.legendAmountWrap}>
+                            <Text style={styles.legendAmount}>${segment.amount.toLocaleString()}</Text>
+                            <Text style={styles.legendShare}>
+                              {Math.round((segment.amount / Math.max(1, budget.income)) * 100)}%
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </Surface>
+                </View>
               </View>
             </Surface>
-
-            <Surface style={[styles.leftoverCard, totals.overspend ? styles.leftoverNegative : styles.leftoverPositive]}>
-              <Text style={styles.leftoverLabel}>{totals.overspend ? 'Over Budget' : 'Leftover / Save'}</Text>
-              <Text style={styles.leftoverValue}>
-                ${(totals.overspend || totals.leftover).toLocaleString()}
-              </Text>
-              <Text style={styles.leftoverSub}>
-                {totals.overspend ? 'You’re spending beyond your monthly income.' : 'After all monthly expenses.'}
-              </Text>
-            </Surface>
-
-            <DonutChart spentPercent={totals.spentPercent} segments={segments} />
-
-            <Surface style={styles.scoreCard}>
-              <Text style={styles.scoreTitle}>Priority Alignment Score</Text>
-              <Text style={styles.scoreValue}>{score}%</Text>
-              <Text style={styles.scoreSub}>How closely your spend ranking matches your preference ranking.</Text>
-            </Surface>
-
-            <View style={styles.legend}>
-              {segments.map((segment) => (
-                <View key={segment.key} style={styles.legendRow}>
-                  <View style={[styles.legendDot, { backgroundColor: segment.color }]} />
-                  <Text style={styles.legendLabel}>{segment.label}</Text>
-                  <Text style={styles.legendAmount}>${segment.amount.toLocaleString()}</Text>
-                </View>
-              ))}
-            </View>
 
             <Text style={styles.sectionHeader}>All Expenses</Text>
             {budget.items.map((item) => {
@@ -149,24 +176,27 @@ export default function BudgetScreen() {
                       </View>
                     </View>
                     <View style={styles.itemActions}>
-                      <Pressable onPress={() => toggleBudgetEssential(item.id)}>
-                        <Text style={[styles.icon, item.ess && styles.iconActive]}>★</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => {
-                          setDraft({
-                            id: item.id,
-                            e: item.e,
-                            n: item.n,
-                            amt: item.amt,
-                            type: item.type,
-                            ess: item.ess,
-                          });
-                          setSheetOpen(true);
-                        }}
-                      >
-                        <Text style={styles.icon}>✎</Text>
-                      </Pressable>
+                      <View style={styles.itemActionRow}>
+                        <Pressable style={styles.iconButton} onPress={() => toggleBudgetEssential(item.id)}>
+                          <Text style={[styles.icon, item.ess && styles.iconActive]}>★</Text>
+                        </Pressable>
+                        <Pressable
+                          style={styles.iconButton}
+                          onPress={() => {
+                            setDraft({
+                              id: item.id,
+                              e: item.e,
+                              n: item.n,
+                              amt: item.amt,
+                              type: item.type,
+                              ess: item.ess,
+                            });
+                            setSheetOpen(true);
+                          }}
+                        >
+                          <Text style={styles.icon}>✎</Text>
+                        </Pressable>
+                      </View>
                       <Text style={styles.itemAmount}>${item.amt}</Text>
                     </View>
                   </View>
@@ -179,7 +209,8 @@ export default function BudgetScreen() {
         ) : null}
 
         {budgetView === 'insights' ? (
-          <View style={styles.insightsWrap}>
+          <View style={[styles.insightsWrap, desktop && styles.insightsWrapDesktop]}>
+          <View style={[styles.insightsMain, desktop && styles.insightsMainDesktop]}>
           {activeInsight ? (
             <>
               <View style={styles.dots}>
@@ -218,6 +249,12 @@ export default function BudgetScreen() {
               <Text style={styles.insightDetail}>As you compare items, this tab will surface patterns and tradeoffs.</Text>
             </Surface>
           )}
+          </View>
+          {!desktop ? (
+            <View style={styles.mobileRail}>
+              <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
+            </View>
+          ) : null}
           </View>
         ) : null}
       </View>
@@ -321,7 +358,54 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
     gap: 14,
   },
-  incomeCard: {
+  heroCard: {
+    padding: 18,
+    gap: 18,
+  },
+  heroCardDesktop: {
+    padding: 24,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  heroTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 26,
+    color: Colors.t1,
+    marginTop: 2,
+  },
+  heroSub: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 13,
+    lineHeight: 20,
+    color: Colors.t2,
+    marginTop: 6,
+    maxWidth: 420,
+  },
+  heroBody: {
+    gap: 16,
+  },
+  heroBodyDesktop: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 22,
+  },
+  chartPanel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  breakdownPanel: {
+    flex: 1,
+    gap: 14,
+  },
+  summaryGrid: {
+    gap: 12,
+  },
+  summaryCard: {
     padding: 18,
   },
   sectionLabel: {
@@ -369,35 +453,17 @@ const styles = StyleSheet.create({
     color: Colors.green,
     marginTop: 6,
   },
+  leftoverValueNegative: {
+    color: Colors.red,
+  },
   leftoverSub: {
     fontFamily: Fonts.bodyLight,
     fontSize: 12,
     color: Colors.t2,
     marginTop: 6,
   },
-  scoreCard: {
+  legendCard: {
     padding: 18,
-    alignItems: 'center',
-  },
-  scoreTitle: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 12,
-    color: Colors.t2,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  scoreValue: {
-    fontFamily: Fonts.display,
-    fontSize: 42,
-    color: Colors.t1,
-    marginTop: 6,
-  },
-  scoreSub: {
-    fontFamily: Fonts.bodyLight,
-    fontSize: 12,
-    color: Colors.t2,
-    textAlign: 'center',
-    marginTop: 6,
   },
   legend: {
     gap: 10,
@@ -405,6 +471,14 @@ const styles = StyleSheet.create({
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    paddingVertical: 4,
+  },
+  legendMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   legendDot: {
     width: 10,
@@ -413,14 +487,22 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   legendLabel: {
-    flex: 1,
     fontFamily: Fonts.body,
     fontSize: 14,
     color: Colors.t1,
   },
+  legendAmountWrap: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
   legendAmount: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
+    color: Colors.t1,
+  },
+  legendShare: {
+    fontFamily: Fonts.body,
+    fontSize: 11,
     color: Colors.t2,
   },
   sectionHeader: {
@@ -461,10 +543,27 @@ const styles = StyleSheet.create({
   },
   itemActions: {
     alignItems: 'flex-end',
-    gap: 6,
+    gap: 10,
+    minWidth: 112,
+  },
+  itemActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.b2,
+    backgroundColor: Colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   icon: {
-    fontSize: 18,
+    fontSize: 19,
     color: Colors.t3,
   },
   iconActive: {
@@ -481,6 +580,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 70,
+    position: 'relative',
+  },
+  insightsWrapDesktop: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 20,
+  },
+  insightsMain: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  insightsMainDesktop: {
+    width: 560,
   },
   dots: {
     flexDirection: 'row',
@@ -501,6 +613,12 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 14,
+    maxWidth: 560,
+  },
+  mobileRail: {
+    width: '100%',
+    marginTop: 20,
+    alignItems: 'center',
   },
   insightEmoji: {
     fontSize: 58,

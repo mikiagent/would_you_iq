@@ -1,18 +1,21 @@
 import React, { ReactNode } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useCloudSync } from '@/components/SyncProvider';
+import { isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts, Spacing } from '@/constants/tokens';
 
 export function PageHeader({
@@ -183,12 +186,15 @@ export function Sheet({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const { width } = useWindowDimensions();
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
+
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
+      <View style={[styles.sheetBackdrop, desktop && styles.sheetBackdropDesktop]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
+        <View style={[styles.sheet, desktop && styles.sheetDesktop]}>
+          <View style={[styles.sheetHandle, desktop && styles.sheetHandleDesktop]} />
           <Text style={styles.sheetTitle}>{title}</Text>
           <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
             {children}
@@ -477,6 +483,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
+  sheetBackdropDesktop: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 84,
+    paddingHorizontal: 24,
+  },
   sheet: {
     backgroundColor: Colors.s1,
     borderTopLeftRadius: 28,
@@ -484,6 +496,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: Colors.b2,
     maxHeight: '82%',
+  },
+  sheetDesktop: {
+    width: '34%',
+    minWidth: 460,
+    maxWidth: 620,
+    maxHeight: '70%',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderTopWidth: 1,
   },
   sheetHandle: {
     alignSelf: 'center',
@@ -493,6 +514,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.b3,
     marginTop: 12,
     marginBottom: 10,
+  },
+  sheetHandleDesktop: {
+    marginTop: 14,
+    marginBottom: 12,
   },
   sheetTitle: {
     fontFamily: Fonts.display,

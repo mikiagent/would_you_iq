@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { ActionButton, Badge, Fab, Field, PageHeader, SegmentedControl, Sheet, Surface, ToggleRow } from '@/components/primitives';
+import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
 import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { buildTaskInsights, filterTasks, getTaskEloTone, getTaskProgress, medalForIndex } from '@/domain/logic';
@@ -355,7 +356,8 @@ export default function TasksScreen() {
         ) : null}
 
         {tasksView === 'insights' ? (
-          <View style={styles.insightsWrap}>
+          <View style={[styles.insightsWrap, desktop && styles.insightsWrapDesktop]}>
+          <View style={[styles.insightsMain, desktop && styles.insightsMainDesktop]}>
           {activeInsight ? (
             <>
               <View style={styles.dots}>
@@ -400,6 +402,12 @@ export default function TasksScreen() {
               <Text style={styles.emptySub}>Complete a few comparisons and we’ll surface patterns here.</Text>
             </Surface>
           )}
+          </View>
+          {!desktop ? (
+            <View style={styles.mobileRail}>
+              <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
+            </View>
+          ) : null}
           </View>
         ) : null}
       </View>
@@ -769,6 +777,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 70,
+    position: 'relative',
+  },
+  insightsWrapDesktop: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 20,
+  },
+  insightsMain: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  insightsMainDesktop: {
+    width: 560,
   },
   dots: {
     flexDirection: 'row',
@@ -789,6 +810,12 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 14,
+    maxWidth: 560,
+  },
+  mobileRail: {
+    width: '100%',
+    marginTop: 20,
+    alignItems: 'center',
   },
   insightEmoji: {
     fontSize: 58,

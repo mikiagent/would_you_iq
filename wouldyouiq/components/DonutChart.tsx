@@ -13,11 +13,12 @@ type Segment = {
 export function DonutChart({
   spentPercent,
   segments,
+  size = 210,
 }: {
   spentPercent: number;
   segments: Segment[];
+  size?: number;
 }) {
-  const size = 210;
   const strokeWidth = 28;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -26,7 +27,7 @@ export function DonutChart({
   let offset = 0;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { width: size, height: size }]}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <Circle
           cx={size / 2}
@@ -70,8 +71,6 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 210,
-    height: 210,
     alignSelf: 'center',
   },
   center: {

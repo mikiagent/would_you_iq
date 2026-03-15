@@ -91,6 +91,12 @@ export interface OnboardingState {
   round: number;
 }
 
+export interface GuidedTourState {
+  active: boolean;
+  step: number;
+  completed: boolean;
+}
+
 export interface ToastState {
   id: string;
   icon: string;

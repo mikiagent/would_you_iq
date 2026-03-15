@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import {
   PanGestureHandler,
   State,
@@ -11,10 +11,12 @@ import {
 
 import { useConfettiOverlay } from '@/components/ConfettiLayer';
 import { ActionButton, Badge, Surface } from '@/components/primitives';
+import { isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { useAppStore } from '@/domain/store';
 
 export default function RunnerScreen() {
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ taskId?: string }>();
   const tasks = useAppStore((state) => state.tasks);
   const runner = useAppStore((state) => state.runner);
@@ -28,6 +30,7 @@ export default function RunnerScreen() {
   const [whyOpen, setWhyOpen] = useState(false);
   const [slideDirection, setSlideDirection] = useState<-1 | 0 | 1>(0);
   const routeTaskId = Array.isArray(params.taskId) ? params.taskId[0] : params.taskId;
+  const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   useEffect(() => {
     return () => {
@@ -112,13 +115,80 @@ export default function RunnerScreen() {
     }).start();
   };
 
+  useEffect(() => {
+    if (!desktop || !subtask || typeof window === 'undefined') {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (shouldIgnoreKeyboardEvent(event)) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        if (canSwipePrevious) {
+          moveRunnerStep(-1);
+        }
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (canSwipeNext) {
+          moveRunnerStep(1);
+        }
+        return;
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault();
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        triggerConfetti({ count: isFinalStep ? 90 : 36 });
+        if (advanceTimeoutRef.current) {
+          clearTimeout(advanceTimeoutRef.current);
+        }
+        advanceTimeoutRef.current = setTimeout(() => {
+          startTransition(() => {
+            advanceRunner('done');
+          });
+        }, 180);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        startTransition(() => {
+          advanceRunner('skip');
+        });
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [advanceRunner, canSwipeNext, canSwipePrevious, desktop, isFinalStep, subtask, triggerConfetti]);
+
+  useEffect(() => {
+    if (!runner.completed) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      resetRunner();
+      router.replace('/(tabs)/fyp');
+    }, 450);
+
+    return () => clearTimeout(timeout);
+  }, [resetRunner, runner.completed]);
+
   if (!task) {
     return (
       <View style={styles.root}>
         <Surface style={styles.empty}>
           <Text style={styles.emptyTitle}>No active runner</Text>
           <Text style={styles.emptySub}>Pick a task with subtasks to start this flow.</Text>
-          <ActionButton label="Back to Tasks" tone="primary" onPress={() => router.push('/(tabs)/tasks')} />
+          <ActionButton label="Back to For You" tone="primary" onPress={() => router.push('/(tabs)/fyp')} />
         </Surface>
       </View>
     );
@@ -184,7 +254,9 @@ export default function RunnerScreen() {
         </PanGestureHandler>
         <View style={styles.swipeHintRow}>
           <Text style={[styles.swipeHint, !canSwipePrevious && styles.swipeHintMuted]}>← Previous</Text>
-          <Text style={styles.swipeHintCenter}>Swipe to move</Text>
+          <Text style={styles.swipeHintCenter}>
+            {desktop ? 'Arrow keys move, space completes, up skips' : 'Swipe to move'}
+          </Text>
           <Text style={[styles.swipeHint, !canSwipeNext && styles.swipeHintMuted]}>Next →</Text>
         </View>
       </View>
@@ -217,6 +289,19 @@ export default function RunnerScreen() {
         />
       </View>
     </View>
+  );
+}
+
+function shouldIgnoreKeyboardEvent(event: KeyboardEvent) {
+  const target = event.target as HTMLElement | null;
+  if (!target) return false;
+
+  const tagName = target.tagName?.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select'
   );
 }
 

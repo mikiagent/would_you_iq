@@ -53,7 +53,12 @@ export default function TabsLayout() {
           tabBarIcon: () => <TabLabel icon="⚙️" />,
         }}
       />
+      <Tabs.Screen
+        name="ai-magic"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
-
