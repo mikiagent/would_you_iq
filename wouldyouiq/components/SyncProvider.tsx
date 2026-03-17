@@ -63,13 +63,32 @@ function getSnapshot(state: ReturnType<typeof useAppStore.getState>): AppSnapsho
 
 function getUserIdentity(sessionUser: any) {
   const metadata = sessionUser?.user_metadata ?? {};
+  const identityData = sessionUser?.identities?.find?.((identity: any) => identity?.provider === 'google')
+    ?.identity_data ?? sessionUser?.identities?.[0]?.identity_data ?? {};
   return {
     id: sessionUser?.id ?? null,
     email: sessionUser?.email ?? null,
-    avatarUrl: metadata.avatar_url ?? metadata.picture ?? null,
-    name: metadata.full_name ?? metadata.name ?? sessionUser?.email?.split('@')[0] ?? null,
+    avatarUrl:
+      metadata.avatar_url ??
+      metadata.picture ??
+      identityData.avatar_url ??
+      identityData.picture ??
+      null,
+    name:
+      metadata.full_name ??
+      metadata.name ??
+      identityData.full_name ??
+      identityData.name ??
+      sessionUser?.email?.split('@')[0] ??
+      null,
   };
 }
+
+type CloudProfile = {
+  name: string | null;
+  avatarUrl: string | null;
+  email: string | null;
+};
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const hasHydrated = useAppStore((state) => state.hasHydrated);
@@ -97,10 +116,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [saveState, setSaveState] = useState<SaveState>('local');
   const [isSaving, setIsSaving] = useState(false);
   const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
+  const [cloudProfile, setCloudProfile] = useState<CloudProfile | null>(null);
 
   const isSignedIn = !!sessionUser?.id;
   const isDirty = isSignedIn ? snapshotHash !== lastSavedHash : true;
-  const identity = getUserIdentity(sessionUser);
+  const sessionIdentity = getUserIdentity(sessionUser);
+  const identity = useMemo(
+    () => ({
+      id: sessionIdentity.id,
+      email: sessionIdentity.email ?? cloudProfile?.email ?? null,
+      avatarUrl: sessionIdentity.avatarUrl ?? cloudProfile?.avatarUrl ?? null,
+      name: sessionIdentity.name ?? cloudProfile?.name ?? null,
+    }),
+    [cloudProfile?.avatarUrl, cloudProfile?.email, cloudProfile?.name, sessionIdentity],
+  );
 
   const mergeAuthIntoStore = useCallback(() => {
     if (!identity.id) return;
@@ -186,11 +215,44 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!identity.id) {
       setSaveState('local');
       setHasLoadedCloud(false);
+      setCloudProfile(null);
       return;
     }
 
     mergeAuthIntoStore();
   }, [identity.id, mergeAuthIntoStore]);
+
+  useEffect(() => {
+    if (!identity.id || !hasHydrated) return;
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await cloudRepository.loadProfile(identity.id!);
+        if (cancelled) return;
+        setCloudProfile(
+          profile
+            ? {
+                name: profile.name,
+                avatarUrl: profile.avatar_url,
+                email: profile.email,
+              }
+            : null,
+        );
+      } catch {
+        if (!cancelled) {
+          setCloudProfile(null);
+        }
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, identity.id]);
 
   useEffect(() => {
     if (!identity.id || !hasHydrated || hasLoadedCloud) return;

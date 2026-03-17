@@ -2,7 +2,6 @@ import React, { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,6 +14,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { AmbientBackground } from '@/components/AmbientBackground';
 import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
 import { GuidedTour } from '@/components/GuidedTour';
+import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { SyncProvider, useCloudSync } from '@/components/SyncProvider';
 import { Toast } from '@/components/Toast';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -65,14 +65,19 @@ function AppShellInner({ children }: { children: ReactNode }) {
 }
 
 function DesktopShell({ children }: { children: ReactNode }) {
+  const { height } = useWindowDimensions();
   const pathname = usePathname();
   const router = useRouter();
   const startGuidedTour = useAppStore((state) => state.startGuidedTour);
   const tasks = useAppStore((state) => state.tasks);
   const { avatarUrl, displayName, email, isSignedIn } = useCloudSync();
+  const storedUser = useAppStore((state) => state.user);
   const showTabsChrome = pathname !== '/onboarding' && pathname !== '/runner';
+  const resolvedAvatarUrl = avatarUrl ?? storedUser.avatarUrl;
+  const resolvedName = displayName ?? storedUser.name;
+  const resolvedEmail = email ?? storedUser.email;
   const initials = useMemo(() => {
-    const source = displayName || email || 'W';
+    const source = resolvedName || resolvedEmail || 'W';
     return source
       .split(' ')
       .map((part) => part.trim()[0])
@@ -80,7 +85,7 @@ function DesktopShell({ children }: { children: ReactNode }) {
       .join('')
       .slice(0, 2)
       .toUpperCase();
-  }, [displayName, email]);
+  }, [resolvedEmail, resolvedName]);
   const navItems = [
     { label: 'Tasks', icon: '📋', href: '/tasks' },
     { label: 'Would You?', icon: '⚡', href: '/calibrate' },
@@ -88,6 +93,8 @@ function DesktopShell({ children }: { children: ReactNode }) {
     { label: 'Budget', icon: '💰', href: '/budget' },
     { label: 'Settings', icon: '⚙️', href: '/settings' },
   ];
+  const phoneHeight = Math.max(700, Math.min(height - 130, 880));
+  const phoneWidth = Math.round(phoneHeight * 0.72);
 
   if (!showTabsChrome) {
     return (
@@ -145,19 +152,13 @@ function DesktopShell({ children }: { children: ReactNode }) {
               <Text style={styles.desktopTutorialLabel}>Tutorial</Text>
             </Pressable>
             <View style={styles.desktopProfileChip}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.desktopAvatar} />
-              ) : (
-                <View style={[styles.desktopAvatar, styles.desktopAvatarFallback]}>
-                  <Text style={styles.desktopAvatarInitials}>{initials}</Text>
-                </View>
-              )}
+              <ProfileAvatar avatarUrl={resolvedAvatarUrl} label={resolvedName || initials} size={38} />
               <View style={styles.desktopProfileMeta}>
                 <Text style={styles.desktopProfileName} numberOfLines={1}>
-                  {displayName || 'Local mode'}
+                  {resolvedName || 'Local mode'}
                 </Text>
                 <Text style={styles.desktopProfileSub} numberOfLines={1}>
-                  {isSignedIn ? email || 'Connected' : 'Offline first'}
+                  {isSignedIn ? resolvedEmail || 'Connected' : 'Offline first'}
                 </Text>
               </View>
             </View>
@@ -165,7 +166,18 @@ function DesktopShell({ children }: { children: ReactNode }) {
         </View>
 
         <View style={styles.desktopContentFrame}>
-          <View style={styles.desktopContent}>{children}</View>
+          <View
+            style={[
+              styles.desktopContent,
+              styles.desktopPanelFrame,
+              {
+                width: phoneWidth,
+                height: phoneHeight,
+              },
+            ]}
+          >
+            {children}
+          </View>
         </View>
         <View style={styles.desktopFloatingRail}>
           <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
@@ -278,7 +290,7 @@ const styles = StyleSheet.create({
   },
   desktopMain: {
     flex: 1,
-    gap: 16,
+    gap: 0,
     position: 'relative',
   },
   desktopTopBar: {
@@ -334,21 +346,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  desktopAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-  },
-  desktopAvatarFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.violet,
-  },
-  desktopAvatarInitials: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 13,
-    color: '#fff',
-  },
   desktopProfileMeta: {
     flex: 1,
     minWidth: 0,
@@ -370,11 +367,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingRight: 360,
+    marginTop: -28,
   },
   desktopContent: {
-    flex: 1,
     width: '100%',
-    maxWidth: 1120,
+  },
+  desktopPanelFrame: {
+    maxWidth: '100%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: Colors.bg,
   },
   desktopFloatingRail: {
     position: 'absolute',

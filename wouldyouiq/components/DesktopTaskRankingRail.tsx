@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ExpandableTaskText } from '@/components/ExpandableTaskText';
 import { Badge, Surface } from '@/components/primitives';
 import { Colors, Fonts } from '@/constants/tokens';
 import { getTaskEloTone } from '@/domain/logic';
@@ -34,9 +35,7 @@ export function DesktopTaskRankingRail({
               <Text style={styles.rank}>{index + 1}</Text>
               <Text style={styles.emoji}>{task.e}</Text>
               <View style={styles.meta}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {task.n}
-                </Text>
+                <ExpandableTaskText value={task.n} style={styles.name} />
                 <Text style={styles.time}>{task.t}</Text>
               </View>
               <Badge label={`ELO ${task.elo}`} tone={getTaskEloTone(task)} />

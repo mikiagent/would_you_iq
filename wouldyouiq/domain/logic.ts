@@ -74,6 +74,15 @@ export function medalForIndex(index: number) {
   return `${index + 1}`;
 }
 
+export function truncateTaskName(value: string, maxLength = 16) {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
 export function buildOnboardingSeedTasks(options: OnboardingOption[]) {
   return options.map((option, index) => {
     const subtasks = buildDefaultSubtasks(option.id);

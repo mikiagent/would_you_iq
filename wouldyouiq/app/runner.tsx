@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import {
   PanGestureHandler,
@@ -13,6 +13,7 @@ import { useConfettiOverlay } from '@/components/ConfettiLayer';
 import { ActionButton, Badge, Surface } from '@/components/primitives';
 import { isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
+import { truncateTaskName } from '@/domain/logic';
 import { useAppStore } from '@/domain/store';
 
 export default function RunnerScreen() {
@@ -29,6 +30,8 @@ export default function RunnerScreen() {
 
   const [whyOpen, setWhyOpen] = useState(false);
   const [slideDirection, setSlideDirection] = useState<-1 | 0 | 1>(0);
+  const [redirectToForYou, setRedirectToForYou] = useState(false);
+  const [navigatingHome, setNavigatingHome] = useState(false);
   const routeTaskId = Array.isArray(params.taskId) ? params.taskId[0] : params.taskId;
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
@@ -115,59 +118,61 @@ export default function RunnerScreen() {
     }).start();
   };
 
-  useEffect(() => {
-    if (!desktop || !subtask || typeof window === 'undefined') {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreKeyboardEvent(event)) {
-        return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!desktop || !subtask || typeof window === 'undefined') {
+        return undefined;
       }
 
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        if (canSwipePrevious) {
-          moveRunnerStep(-1);
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (shouldIgnoreKeyboardEvent(event)) {
+          return;
         }
-        return;
-      }
 
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        if (canSwipeNext) {
-          moveRunnerStep(1);
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          if (canSwipePrevious) {
+            moveRunnerStep(-1);
+          }
+          return;
         }
-        return;
-      }
 
-      if (event.key === ' ') {
-        event.preventDefault();
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        triggerConfetti({ count: isFinalStep ? 90 : 36 });
-        if (advanceTimeoutRef.current) {
-          clearTimeout(advanceTimeoutRef.current);
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          if (canSwipeNext) {
+            moveRunnerStep(1);
+          }
+          return;
         }
-        advanceTimeoutRef.current = setTimeout(() => {
+
+        if (event.key === ' ') {
+          event.preventDefault();
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          triggerConfetti({ count: isFinalStep ? 90 : 36 });
+          if (advanceTimeoutRef.current) {
+            clearTimeout(advanceTimeoutRef.current);
+          }
+          advanceTimeoutRef.current = setTimeout(() => {
+            startTransition(() => {
+              advanceRunner('done');
+            });
+          }, 180);
+          return;
+        }
+
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           startTransition(() => {
-            advanceRunner('done');
+            advanceRunner('skip');
           });
-        }, 180);
-        return;
-      }
+        }
+      };
 
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        startTransition(() => {
-          advanceRunner('skip');
-        });
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [advanceRunner, canSwipeNext, canSwipePrevious, desktop, isFinalStep, subtask, triggerConfetti]);
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }, [advanceRunner, canSwipeNext, canSwipePrevious, desktop, isFinalStep, subtask, triggerConfetti]),
+  );
 
   useEffect(() => {
     if (!runner.completed) {
@@ -175,12 +180,33 @@ export default function RunnerScreen() {
     }
 
     const timeout = setTimeout(() => {
+      setNavigatingHome(true);
       resetRunner();
-      router.replace('/(tabs)/fyp');
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.replace('/fyp');
+        return;
+      }
+      setRedirectToForYou(true);
     }, 450);
 
     return () => clearTimeout(timeout);
   }, [resetRunner, runner.completed]);
+
+  if (redirectToForYou) {
+    return <Redirect href="/(tabs)/fyp" />;
+  }
+
+  if (navigatingHome) {
+    return (
+      <View style={styles.root}>
+        <Surface style={styles.empty}>
+          <Text style={styles.stepEmoji}>✨</Text>
+          <Text style={styles.title}>Opening For You</Text>
+          <Text style={styles.sub}>Refreshing your next-best task view...</Text>
+        </Surface>
+      </View>
+    );
+  }
 
   if (!task) {
     return (
@@ -188,7 +214,17 @@ export default function RunnerScreen() {
         <Surface style={styles.empty}>
           <Text style={styles.emptyTitle}>No active runner</Text>
           <Text style={styles.emptySub}>Pick a task with subtasks to start this flow.</Text>
-          <ActionButton label="Back to For You" tone="primary" onPress={() => router.push('/(tabs)/fyp')} />
+          <ActionButton
+            label="Back to For You"
+            tone="primary"
+            onPress={() => {
+              if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                window.location.replace('/fyp');
+                return;
+              }
+              router.replace('/(tabs)/fyp');
+            }}
+          />
         </Surface>
       </View>
     );
@@ -206,7 +242,11 @@ export default function RunnerScreen() {
             tone="primary"
             onPress={() => {
               resetRunner();
-              router.push('/(tabs)/fyp');
+              if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                window.location.replace('/fyp');
+                return;
+              }
+              router.replace('/(tabs)/fyp');
             }}
           />
         </Surface>
@@ -235,7 +275,7 @@ export default function RunnerScreen() {
       </View>
 
       <View style={styles.content}>
-        <Badge label={`${task.e} ${task.n}`} tone="violet" />
+        <Badge label={`${task.e} ${truncateTaskName(task.n)}`} tone="violet" />
         <View style={styles.connector} />
         <PanGestureHandler
           activeOffsetX={[-14, 14]}

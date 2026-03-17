@@ -68,7 +68,16 @@ export default function BudgetScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.content, desktop && styles.contentDesktop]}>
-        <PageHeader title="Budget 💰" />
+        <PageHeader
+          title="Budget 💰"
+          right={
+            desktop ? (
+              <Pressable style={styles.desktopAddButton} onPress={openCreate}>
+                <Text style={styles.desktopAddButtonLabel}>+ Add expense</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
         <SegmentedControl
           items={[
             { label: '📊 Overview', value: 'overview' },
@@ -82,7 +91,7 @@ export default function BudgetScreen() {
             <ScrollView contentContainerStyle={styles.scroll}>
             <Surface style={[styles.heroCard, desktop && styles.heroCardDesktop]}>
               <View style={styles.heroHeader}>
-                <View>
+                <View style={styles.heroCopy}>
                   <Text style={styles.sectionLabel}>Monthly Budget</Text>
                   <Text style={styles.heroTitle}>Spending breakdown</Text>
                   <Text style={styles.heroSub}>
@@ -96,13 +105,13 @@ export default function BudgetScreen() {
               </View>
 
               <View style={[styles.heroBody, desktop && styles.heroBodyDesktop]}>
-                <View style={styles.chartPanel}>
-                  <DonutChart spentPercent={totals.spentPercent} segments={segments} size={desktop ? 280 : 230} />
+                <View style={[styles.chartPanel, desktop && styles.chartPanelDesktop]}>
+                  <DonutChart spentPercent={totals.spentPercent} segments={segments} size={desktop ? 240 : 230} />
                 </View>
 
-                <View style={styles.breakdownPanel}>
-                  <View style={styles.summaryGrid}>
-                    <Surface style={styles.summaryCard}>
+                <View style={[styles.breakdownPanel, desktop && styles.breakdownPanelDesktop]}>
+                  <View style={[styles.summaryGrid, desktop && styles.summaryGridDesktop]}>
+                    <Surface style={[styles.summaryCard, desktop && styles.summaryCardDesktop]}>
                       <Text style={styles.sectionLabel}>Monthly Income</Text>
                       <View style={styles.incomeRow}>
                         <Text style={styles.incomeValue}>${budget.income.toLocaleString()}</Text>
@@ -115,7 +124,14 @@ export default function BudgetScreen() {
                       </View>
                     </Surface>
 
-                    <Surface style={[styles.summaryCard, styles.leftoverCard, totals.overspend ? styles.leftoverNegative : styles.leftoverPositive]}>
+                    <Surface
+                      style={[
+                        styles.summaryCard,
+                        styles.summaryCardDesktop,
+                        styles.leftoverCard,
+                        totals.overspend ? styles.leftoverNegative : styles.leftoverPositive,
+                      ]}
+                    >
                       <Text style={styles.leftoverLabel}>{totals.overspend ? 'Over Budget' : 'Leftover / Save'}</Text>
                       <Text style={[styles.leftoverValue, totals.overspend ? styles.leftoverValueNegative : null]}>
                         ${(totals.overspend || totals.leftover).toLocaleString()}
@@ -164,7 +180,9 @@ export default function BudgetScreen() {
                   <View style={styles.itemRow}>
                     <Text style={styles.itemEmoji}>{item.e}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.itemName}>{item.n}</Text>
+                      <Text style={styles.itemName} numberOfLines={1}>
+                        {item.n}
+                      </Text>
                       <View style={styles.itemMeta}>
                         {item.ess ? <Badge label="⭐ Essential" tone="gold" /> : <Badge label={`ELO ${item.elo}`} tone={tone === 'positive' ? 'green' : tone === 'negative' ? 'danger' : 'violet'} />}
                         {flaggedIds.has(item.id) ? (
@@ -204,7 +222,7 @@ export default function BudgetScreen() {
               );
             })}
             </ScrollView>
-            <Fab onPress={openCreate} />
+            {!desktop ? <Fab onPress={openCreate} /> : null}
           </>
         ) : null}
 
@@ -358,6 +376,19 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
     gap: 14,
   },
+  desktopAddButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(167,139,250,0.3)',
+    backgroundColor: 'rgba(124,106,247,0.18)',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  desktopAddButtonLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 12,
+    color: Colors.t1,
+  },
   heroCard: {
     padding: 18,
     gap: 18,
@@ -370,6 +401,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 14,
+    flexWrap: 'wrap',
+  },
+  heroCopy: {
+    flex: 1,
+    minWidth: 220,
   },
   heroTitle: {
     fontFamily: Fonts.display,
@@ -389,24 +425,37 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   heroBodyDesktop: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 22,
+    gap: 18,
   },
   chartPanel: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
+  chartPanelDesktop: {
+    paddingTop: 4,
+  },
   breakdownPanel: {
     flex: 1,
     gap: 14,
   },
+  breakdownPanelDesktop: {
+    width: '100%',
+  },
   summaryGrid: {
     gap: 12,
   },
+  summaryGridDesktop: {
+    flexDirection: 'row',
+  },
   summaryCard: {
     padding: 18,
+  },
+  summaryCardDesktop: {
+    flex: 1,
+    minWidth: 0,
   },
   sectionLabel: {
     fontFamily: Fonts.bodyBold,
@@ -423,8 +472,9 @@ const styles = StyleSheet.create({
   },
   incomeValue: {
     fontFamily: Fonts.display,
-    fontSize: 34,
+    fontSize: 28,
     color: Colors.t1,
+    flexShrink: 1,
   },
   link: {
     fontFamily: Fonts.bodyBold,
@@ -449,7 +499,7 @@ const styles = StyleSheet.create({
   },
   leftoverValue: {
     fontFamily: Fonts.display,
-    fontSize: 30,
+    fontSize: 26,
     color: Colors.green,
     marginTop: 6,
   },
@@ -470,15 +520,16 @@ const styles = StyleSheet.create({
   },
   legendRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 16,
     paddingVertical: 4,
   },
   legendMain: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
+    minWidth: 0,
   },
   legendDot: {
     width: 10,
@@ -490,6 +541,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.body,
     fontSize: 14,
     color: Colors.t1,
+    flexShrink: 1,
   },
   legendAmountWrap: {
     alignItems: 'flex-end',
@@ -592,7 +644,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   insightsMainDesktop: {
-    width: 560,
+    width: '100%',
+    maxWidth: 470,
   },
   dots: {
     flexDirection: 'row',
@@ -613,7 +666,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 14,
-    maxWidth: 560,
+    maxWidth: 470,
   },
   mobileRail: {
     width: '100%',

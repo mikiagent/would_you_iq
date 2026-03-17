@@ -789,7 +789,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   insightsMainDesktop: {
-    width: 560,
+    width: '100%',
+    maxWidth: 470,
   },
   dots: {
     flexDirection: 'row',
@@ -810,7 +811,7 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     gap: 14,
-    maxWidth: 560,
+    maxWidth: 470,
   },
   mobileRail: {
     width: '100%',

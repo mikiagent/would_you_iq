@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { useCloudSync } from '@/components/SyncProvider';
 import { ActionButton, Field, PageHeader, Sheet, Surface } from '@/components/primitives';
 import { Layout, isDesktopWidth } from '@/constants/layout';
@@ -18,6 +19,9 @@ export default function SettingsScreen() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState(user.name);
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
+  const resolvedAvatarUrl = avatarUrl ?? user.avatarUrl;
+  const resolvedName = displayName ?? user.name;
+  const resolvedEmail = email ?? user.email;
 
   return (
     <View style={styles.root}>
@@ -29,16 +33,10 @@ export default function SettingsScreen() {
             <Text style={styles.streakEmoji}>🔥</Text>
             <Text style={styles.streakValue}>{user.streak}</Text>
           </View>
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>{user.name.slice(0, 1).toUpperCase()}</Text>
-            </View>
-          )}
-          <Text style={styles.profileName}>{displayName ?? user.name}</Text>
+          <ProfileAvatar avatarUrl={resolvedAvatarUrl} label={resolvedName} size={72} />
+          <Text style={styles.profileName}>{resolvedName}</Text>
           <Text style={styles.profileSub}>
-            {isSignedIn ? email ?? 'Signed in with Google' : 'Use Google sign-in to sync this device to Supabase.'}
+            {isSignedIn ? resolvedEmail ?? 'Signed in with Google' : 'Use Google sign-in to sync this device to Supabase.'}
           </Text>
           <View style={styles.profileActionsRow}>
             <ActionButton
@@ -154,26 +152,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.display,
     fontSize: 20,
     color: Colors.gold,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.s2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.b2,
-  },
-  avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  avatarLabel: {
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    color: Colors.t1,
   },
   profileName: {
     fontFamily: Fonts.display,

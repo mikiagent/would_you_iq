@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { CompletionOverlay } from '@/components/CompletionOverlay';
+import { ExpandableTaskText } from '@/components/ExpandableTaskText';
 import { ActionButton, Badge, SegmentedControl, Surface } from '@/components/primitives';
 import { useXpOverlay } from '@/components/XpOverlay';
 import { Layout, isDesktopWidth } from '@/constants/layout';
@@ -180,43 +181,45 @@ export default function CalibrateScreen() {
     });
   }, [commitArenaSwipe, pan, triggerXp]);
 
-  useEffect(() => {
-    if (!desktop || !challenger || !champion || typeof window === 'undefined') {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreKeyboardEvent(event)) {
-        return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!desktop || !challenger || !champion || typeof window === 'undefined') {
+        return undefined;
       }
 
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        finishSwipe('champion');
-        return;
-      }
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (shouldIgnoreKeyboardEvent(event)) {
+          return;
+        }
 
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        finishSwipe('challenger');
-        return;
-      }
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          finishSwipe('champion');
+          return;
+        }
 
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        finishSwipe('skip');
-        return;
-      }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          finishSwipe('challenger');
+          return;
+        }
 
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        finishSwipe('essential');
-      }
-    };
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          finishSwipe('skip');
+          return;
+        }
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [challenger, champion, desktop, finishSwipe]);
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          finishSwipe('essential');
+        }
+      };
+
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }, [challenger, champion, desktop, finishSwipe]),
+  );
 
   const responder = useRef(
     PanResponder.create({
@@ -320,7 +323,7 @@ export default function CalibrateScreen() {
           <Text style={styles.questionLabel}>Do you agree with this statement?</Text>
           <View style={styles.statementTop}>
             <Text style={styles.statementEmoji}>{challenger.e}</Text>
-            <Text style={styles.statementTitle}>{challenger.n}</Text>
+            <ExpandableTaskText value={challenger.n} style={styles.statementTitle} numberOfLines={2} />
           </View>
           <View style={styles.statementCenter}>
             <Text style={styles.statementArrow}>&gt;</Text>
@@ -329,7 +332,7 @@ export default function CalibrateScreen() {
           <Animated.View style={[styles.statementBottom, { transform: [{ scale: championBounce }] }]}>
             <Text style={styles.statementEmoji}>{champion.e}</Text>
             <View style={styles.statementBottomText}>
-              <Text style={styles.statementTitle}>{champion.n}?</Text>
+              <ExpandableTaskText value={`${champion.n}?`} style={styles.statementTitle} numberOfLines={2} />
             </View>
           </Animated.View>
         </View>
@@ -370,7 +373,7 @@ export default function CalibrateScreen() {
               >
                 {challenger.e}
               </Animated.Text>
-              <Text style={styles.cardTitle}>{challenger.n}</Text>
+              <ExpandableTaskText value={challenger.n} style={styles.cardTitle} numberOfLines={2} />
               <Text style={styles.cardMeta}>{challengerMeta}</Text>
             </Surface>
           </Animated.View>

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { ExpandableTaskText } from '@/components/ExpandableTaskText';
 import { ActionButton, Badge, Surface } from '@/components/primitives';
 import { OB_TASKS } from '@/constants/onboarding';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -243,7 +244,7 @@ export default function OnboardingScreen() {
                   onPress={() => chooseWinner(task.id)}
                 >
                   <Text style={styles.compareEmoji}>{task.e}</Text>
-                  <Text style={styles.compareName}>{task.n}</Text>
+                  <ExpandableTaskText value={task.n} style={styles.compareName} numberOfLines={2} />
                   <Badge label={task.t} />
                 </Pressable>
               ) : null,
@@ -265,7 +266,7 @@ export default function OnboardingScreen() {
                 <Text style={styles.rankMedal}>{medalForIndex(index)}</Text>
                 <Text style={styles.rankEmoji}>{task.e}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rankName}>{task.n}</Text>
+                  <ExpandableTaskText value={task.n} style={styles.rankName} />
                   <Text style={styles.rankMeta}>Starter ELO {task.elo}</Text>
                 </View>
               </View>

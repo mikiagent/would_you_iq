@@ -18,6 +18,7 @@ import {
   type PanGestureHandlerStateChangeEvent,
 } from 'react-native-gesture-handler';
 
+import { ExpandableTaskText } from '@/components/ExpandableTaskText';
 import { ActionButton, Badge, Surface } from '@/components/primitives';
 import { useConfettiOverlay } from '@/components/ConfettiLayer';
 import { Layout, isDesktopWidth } from '@/constants/layout';
@@ -197,43 +198,33 @@ export default function ForYouScreen() {
     toggleTaskDone(task.id);
   }, [startRunner, task, toggleTaskDone, triggerConfetti]);
 
-  useEffect(() => {
-    if (!desktop || !task || typeof window === 'undefined') {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreKeyboardEvent(event)) {
-        return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!desktop || !task || typeof window === 'undefined') {
+        return undefined;
       }
 
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        skipTask();
-        return;
-      }
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (shouldIgnoreKeyboardEvent(event)) {
+          return;
+        }
 
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        runPrimaryAction();
-        return;
-      }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          skipTask();
+          return;
+        }
 
-      if (event.key === ' ') {
-        event.preventDefault();
-        runPrimaryAction();
-        return;
-      }
+        if (event.key === ' ') {
+          event.preventDefault();
+          runPrimaryAction();
+        }
+      };
 
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        setDetailOpen((value) => !value);
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [desktop, runPrimaryAction, skipTask, task]);
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    }, [desktop, runPrimaryAction, skipTask, task]),
+  );
 
   const resetCardPosition = useCallback(() => {
     Animated.spring(cardY, {
@@ -349,7 +340,7 @@ export default function ForYouScreen() {
                   <Badge label={`ELO ${nextTask.elo}`} tone={nextTaskTone.badgeTone} />
                 </View>
                 <Text style={styles.previewEmoji}>{nextTask.e}</Text>
-                <Text style={styles.previewName}>{nextTask.n}</Text>
+                <ExpandableTaskText value={nextTask.n} style={styles.previewName} />
                 <Text style={styles.meta}>⏱ {nextTask.t}</Text>
               </View>
             </Surface>
@@ -404,7 +395,7 @@ export default function ForYouScreen() {
                   >
                     {task.e}
                   </Animated.Text>
-                  <Text style={[styles.name, desktop && styles.nameDesktop]}>{task.n}</Text>
+                  <ExpandableTaskText value={task.n} style={[styles.name, desktop && styles.nameDesktop]} />
                   <Text style={styles.meta}>⏱ {task.t}</Text>
                   <PressableTellMeMore
                     open={detailOpen}
