@@ -277,28 +277,32 @@ export default function CalibrateScreen() {
 
   const challengerMeta =
     arena.mode === 'tasks' ? (challenger as Task).t : `$${(challenger as BudgetItem).amt}/mo`;
+  const championMeta =
+    arena.mode === 'tasks' ? (champion as Task).t : `$${(champion as BudgetItem).amt}/mo`;
 
   return (
     <View style={styles.root}>
       <View style={[styles.content, desktop && styles.contentDesktop]}>
         <View style={styles.header}>
           <Text style={styles.logo}>WouldYouIQ</Text>
-          <Animated.View style={[styles.levelBlock, { transform: [{ scale: levelPulse }] }]}>
-            <View style={styles.levelRow}>
-              <Text style={styles.levelLabel}>Level {levelInfo.level}</Text>
-              <Text style={styles.levelMeta}>
-                {levelInfo.current}/{levelInfo.needed} XP
-              </Text>
-            </View>
-            <View style={styles.streakInline}>
-              <Text style={styles.streakInlineEmoji}>🔥</Text>
-              <Text style={styles.streakInlineLabel}>{user.streak} day streak</Text>
-            </View>
-            <View style={styles.levelTrack}>
-              <View style={[styles.levelFill, { width: `${Math.max(6, levelInfo.progress * 100)}%` }]} />
-            </View>
-            {levelBannerVisible ? <Text style={styles.levelBanner}>Level Up!</Text> : null}
-          </Animated.View>
+          {!desktop ? (
+            <Animated.View style={[styles.levelBlock, { transform: [{ scale: levelPulse }] }]}>
+              <View style={styles.levelRow}>
+                <Text style={styles.levelLabel}>Level {levelInfo.level}</Text>
+                <Text style={styles.levelMeta}>
+                  {levelInfo.current}/{levelInfo.needed} XP
+                </Text>
+              </View>
+              <View style={styles.streakInline}>
+                <Text style={styles.streakInlineEmoji}>🔥</Text>
+                <Text style={styles.streakInlineLabel}>{user.streak} day streak</Text>
+              </View>
+              <View style={styles.levelTrack}>
+                <View style={[styles.levelFill, { width: `${Math.max(6, levelInfo.progress * 100)}%` }]} />
+              </View>
+              {levelBannerVisible ? <Text style={styles.levelBanner}>Level Up!</Text> : null}
+            </Animated.View>
+          ) : null}
           <View style={styles.modeWrap}>
             <SegmentedControl
               items={[
@@ -319,30 +323,12 @@ export default function CalibrateScreen() {
           ))}
         </View>
 
-        <View style={[styles.question, desktop && styles.questionDesktop]}>
-          <Text style={styles.questionLabel}>Do you agree with this statement?</Text>
-          <View style={styles.statementTop}>
-            <Text style={styles.statementEmoji}>{challenger.e}</Text>
-            <ExpandableTaskText value={challenger.n} style={styles.statementTitle} numberOfLines={2} />
-          </View>
-          <View style={styles.statementCenter}>
-            <Text style={styles.statementArrow}>&gt;</Text>
-            <Text style={styles.statementHint}>(More Important)</Text>
-          </View>
-          <Animated.View style={[styles.statementBottom, { transform: [{ scale: championBounce }] }]}>
-            <Text style={styles.statementEmoji}>{champion.e}</Text>
-            <View style={styles.statementBottomText}>
-              <ExpandableTaskText value={`${champion.n}?`} style={styles.statementTitle} numberOfLines={2} />
-            </View>
-          </Animated.View>
-        </View>
-
         <View style={styles.arena}>
           <Animated.View
             {...responder.panHandlers}
             style={[
-              styles.cardWrap,
-              desktop && styles.cardWrapDesktop,
+              styles.statementCardWrap,
+              desktop && styles.statementCardWrapDesktop,
               {
                 transform: [...pan.getTranslateTransform(), { rotate }, { scale: cardIntro }],
               },
@@ -350,40 +336,53 @@ export default function CalibrateScreen() {
           >
             <Surface
               style={[
-                styles.card,
-                desktop && styles.cardDesktop,
-                activeDirection === 'challenger' && styles.cardYes,
-                activeDirection === 'champion' && styles.cardNo,
-                activeDirection === 'essential' && styles.cardEssential,
+                styles.statementCard,
+                desktop && styles.statementCardDesktop,
+                activeDirection === 'challenger' && styles.statementCardYes,
+                activeDirection === 'champion' && styles.statementCardNo,
+                activeDirection === 'essential' && styles.statementCardEssential,
               ]}
             >
               <View style={styles.overlayWrap}>
-                {activeDirection === 'challenger' ? <Text style={styles.overlayYes}>✓ YES</Text> : null}
-                {activeDirection === 'champion' ? <Text style={styles.overlayNo}>✗ NO</Text> : null}
+                {activeDirection === 'challenger' ? <Text style={styles.overlayYes}>→ YES</Text> : null}
+                {activeDirection === 'champion' ? <Text style={styles.overlayNo}>← NO</Text> : null}
                 {activeDirection === 'skip' ? <Text style={styles.overlaySkip}>↑ SKIP</Text> : null}
-                {activeDirection === 'essential' ? <Text style={styles.overlayEssential}>⭐ ESSENTIAL</Text> : null}
+                {activeDirection === 'essential' ? <Text style={styles.overlayEssential}>↓ ESSENTIAL</Text> : null}
               </View>
-              <Animated.Text
-                style={[
-                  styles.cardEmoji,
-                  {
-                    transform: [{ rotate: idleRotate }, { translateY: idleTranslateY }],
-                  },
-                ]}
-              >
-                {challenger.e}
-              </Animated.Text>
-              <ExpandableTaskText value={challenger.n} style={styles.cardTitle} numberOfLines={2} />
-              <Text style={styles.cardMeta}>{challengerMeta}</Text>
+              <Text style={styles.questionLabel}>Do you agree with this statement?</Text>
+              <View style={styles.statementTop}>
+                <Text style={styles.statementMeta}>{challengerMeta}</Text>
+                <Animated.Text
+                  style={[
+                    styles.statementEmoji,
+                    {
+                      transform: [{ rotate: idleRotate }, { translateY: idleTranslateY }],
+                    },
+                  ]}
+                >
+                  {challenger.e}
+                </Animated.Text>
+                <ExpandableTaskText value={challenger.n} style={styles.statementTitle} numberOfLines={2} />
+              </View>
+              <View style={styles.statementCenter}>
+                <Text style={styles.statementArrow}>&gt;</Text>
+                <Text style={styles.statementHint}>(MORE IMPORTANT)</Text>
+              </View>
+              <Animated.View style={[styles.statementBottom, { transform: [{ scale: championBounce }] }]}>
+                <Text style={styles.statementMeta}>{championMeta}</Text>
+                <Text style={styles.statementEmoji}>{champion.e}</Text>
+                <View style={styles.statementBottomText}>
+                  <ExpandableTaskText value={`${champion.n}?`} style={styles.statementTitle} numberOfLines={2} />
+                </View>
+              </Animated.View>
+              <View style={styles.statementControls}>
+                <GuideItem label="YES" icon="→" active={activeDirection === 'challenger'} tone="green" />
+                <GuideItem label="NO" icon="←" active={activeDirection === 'champion'} tone="danger" />
+                <GuideItem label="SKIP" icon="↑" active={activeDirection === 'skip'} tone="default" />
+                <GuideItem label="ESSENTIAL" icon="↓" active={activeDirection === 'essential'} tone="gold" />
+              </View>
             </Surface>
           </Animated.View>
-        </View>
-
-        <View style={styles.swipeGuide}>
-          <GuideItem label="YES" icon="→" active={activeDirection === 'challenger'} tone="green" />
-          <GuideItem label="NO" icon="←" active={activeDirection === 'champion'} tone="danger" />
-          <GuideItem label="SKIP" icon="↑" active={activeDirection === 'skip'} tone="default" />
-          <GuideItem label="ESSENTIAL" icon="↓" active={activeDirection === 'essential'} tone="gold" />
         </View>
         {desktop ? (
           <Text style={styles.desktopHint}>
@@ -542,8 +541,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 8,
-    marginBottom: 10,
+    marginTop: 4,
+    marginBottom: 8,
   },
   progressTrack: {
     flex: 1,
@@ -564,84 +563,81 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.violet,
     borderColor: Colors.violet,
   },
-  question: {
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  questionDesktop: {
-    maxWidth: 760,
-    alignSelf: 'center',
-    marginBottom: 22,
-  },
   questionLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 11,
     color: Colors.t3,
     textTransform: 'uppercase',
     letterSpacing: 1.6,
-    marginBottom: 14,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   statementTop: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   statementBottom: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   statementCenter: {
     alignItems: 'center',
-    marginVertical: 4,
+    marginVertical: 10,
   },
   statementBottomText: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  statementMeta: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 11,
+    color: Colors.v2,
   },
   statementEmoji: {
-    fontSize: 30,
+    fontSize: 32,
   },
   statementTitle: {
     fontFamily: Fonts.display,
-    fontSize: 24,
+    fontSize: 22,
     color: Colors.t1,
-    lineHeight: 30,
+    lineHeight: 26,
+    textAlign: 'center',
   },
   statementArrow: {
     fontFamily: Fonts.display,
-    fontSize: 46,
+    fontSize: 48,
     lineHeight: 52,
     color: Colors.gold,
-    marginVertical: 4,
+    marginVertical: 2,
   },
   statementHint: {
     fontFamily: Fonts.bodyBold,
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.gold,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    marginTop: -4,
+    marginTop: -2,
   },
   arena: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 34,
+    paddingTop: 4,
   },
-  cardWrap: {
+  statementCardWrap: {
     width: '100%',
-    maxWidth: 350,
+    maxWidth: 620,
   },
-  cardWrapDesktop: {
-    maxWidth: 420,
+  statementCardWrapDesktop: {
+    maxWidth: 640,
   },
-  card: {
-    minHeight: 340,
-    borderRadius: 30,
+  statementCard: {
+    minHeight: 430,
+    borderRadius: 26,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 18,
     backgroundColor: '#120f2a',
     borderColor: 'rgba(167,139,250,0.24)',
     shadowColor: '#000',
@@ -649,16 +645,16 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
   },
-  cardDesktop: {
-    minHeight: 390,
+  statementCardDesktop: {
+    minHeight: 500,
   },
-  cardYes: {
+  statementCardYes: {
     borderColor: 'rgba(52,211,153,0.55)',
   },
-  cardNo: {
+  statementCardNo: {
     borderColor: 'rgba(248,113,113,0.5)',
   },
-  cardEssential: {
+  statementCardEssential: {
     borderColor: 'rgba(245,200,66,0.5)',
   },
   overlayWrap: {
@@ -686,34 +682,20 @@ const styles = StyleSheet.create({
     color: Colors.gold,
     fontSize: 16,
   },
-  cardEmoji: {
-    fontSize: 86,
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 30,
-    color: Colors.t1,
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 38,
-  },
-  cardMeta: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 18,
-    color: Colors.t2,
-  },
-  swipeGuide: {
+  statementControls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 6,
-    marginBottom: 14,
+    width: '100%',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   desktopHint: {
+    marginTop: 10,
     marginBottom: 14,
     fontFamily: Fonts.body,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
     color: Colors.t2,
     textAlign: 'center',
   },

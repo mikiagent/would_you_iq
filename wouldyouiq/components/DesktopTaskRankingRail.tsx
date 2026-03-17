@@ -29,18 +29,42 @@ export function DesktopTaskRankingRail({
 
       <View style={styles.list}>
         {rankedTasks.length ? (
-          rankedTasks.slice(0, 8).map((task, index) => (
-            <View key={task.id} style={[styles.row, task.ess && styles.rowEssential]}>
-              {task.ess ? <Text style={styles.essentialStar}>★</Text> : null}
-              <Text style={styles.rank}>{index + 1}</Text>
-              <Text style={styles.emoji}>{task.e}</Text>
-              <View style={styles.meta}>
-                <ExpandableTaskText value={task.n} style={styles.name} />
-                <Text style={styles.time}>{task.t}</Text>
+          rankedTasks.slice(0, 8).map((task, index) => {
+            const tone = getTaskEloTone(task);
+
+            return (
+              <View
+                key={task.id}
+                style={[
+                  styles.row,
+                  task.ess && styles.rowEssential,
+                  tone === 'gold' && styles.rowGold,
+                  tone === 'violet' && styles.rowViolet,
+                  tone === 'green' && styles.rowGreen,
+                  tone === 'danger' && styles.rowDanger,
+                ]}
+              >
+                {task.ess ? <Text style={styles.essentialStar}>★</Text> : null}
+                <Text
+                  style={[
+                    styles.rank,
+                    tone === 'gold' && styles.rankGold,
+                    tone === 'violet' && styles.rankViolet,
+                    tone === 'green' && styles.rankGreen,
+                    tone === 'danger' && styles.rankDanger,
+                  ]}
+                >
+                  {index + 1}
+                </Text>
+                <Text style={styles.emoji}>{task.e}</Text>
+                <View style={styles.meta}>
+                  <ExpandableTaskText value={task.n} style={styles.name} />
+                  <Text style={styles.time}>{task.t}</Text>
+                </View>
+                <Badge label={`ELO ${task.elo}`} tone={tone} />
               </View>
-              <Badge label={`ELO ${task.elo}`} tone={getTaskEloTone(task)} />
-            </View>
-          ))
+            );
+          })
         ) : (
           <Text style={styles.empty}>No active tasks in the ladder right now.</Text>
         )}
@@ -100,6 +124,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,200,66,0.34)',
     backgroundColor: 'rgba(245,200,66,0.08)',
   },
+  rowGold: {
+    borderColor: 'rgba(245,200,66,0.32)',
+  },
+  rowViolet: {
+    borderColor: 'rgba(167,139,250,0.28)',
+  },
+  rowGreen: {
+    borderColor: 'rgba(52,211,153,0.28)',
+  },
+  rowDanger: {
+    borderColor: 'rgba(248,113,113,0.28)',
+  },
   essentialStar: {
     position: 'absolute',
     top: 8,
@@ -113,6 +149,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.t3,
     textAlign: 'center',
+  },
+  rankGold: {
+    color: Colors.gold,
+  },
+  rankViolet: {
+    color: Colors.v2,
+  },
+  rankGreen: {
+    color: Colors.green,
+  },
+  rankDanger: {
+    color: Colors.red,
   },
   emoji: {
     fontSize: 24,

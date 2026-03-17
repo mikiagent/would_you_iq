@@ -1,8 +1,20 @@
 import { OB_TASKS } from '../constants/onboarding.ts';
 import { buildOnboardingSeedTasks, buildTournamentPairs, cloneSnapshot, createId } from '../domain/logic.ts';
-import type { AppSnapshot } from '../domain/models.ts';
+import type { AppSnapshot, Budget } from '../domain/models.ts';
 
 const seedTasks = buildOnboardingSeedTasks(OB_TASKS.slice(0, 8));
+const onboardingSampleBudget: Budget = {
+  income: 4500,
+  items: [
+    { id: createId('budget'), e: '🏠', n: 'Rent', amt: 1500, type: 'ess' as const, ess: true, elo: 1200, comps: 0, createdAt: Date.now() },
+    { id: createId('budget'), e: '💡', n: 'Utilities', amt: 180, type: 'ess' as const, ess: true, elo: 1200, comps: 0, createdAt: Date.now() + 1 },
+    { id: createId('budget'), e: '🛒', n: 'Groceries', amt: 450, type: 'ess' as const, ess: true, elo: 1200, comps: 0, createdAt: Date.now() + 2 },
+    { id: createId('budget'), e: '🚗', n: 'Transportation', amt: 220, type: 'ess' as const, ess: false, elo: 1216, comps: 2, createdAt: Date.now() + 3 },
+    { id: createId('budget'), e: '💪', n: 'Gym', amt: 65, type: 'flex' as const, ess: false, elo: 1298, comps: 3, createdAt: Date.now() + 4 },
+    { id: createId('budget'), e: '☕', n: 'Coffee Runs', amt: 85, type: 'flex' as const, ess: false, elo: 1172, comps: 2, createdAt: Date.now() + 5 },
+    { id: createId('budget'), e: '🎬', n: 'Streaming', amt: 32, type: 'flex' as const, ess: false, elo: 1154, comps: 2, createdAt: Date.now() + 6 },
+  ],
+};
 
 const initialSnapshot: AppSnapshot = {
   user: {
@@ -60,8 +72,59 @@ const initialSnapshot: AppSnapshot = {
   },
 };
 
+const signedOutSnapshot: AppSnapshot = {
+  user: {
+    name: 'Friend',
+    xp: 0,
+    streak: 0,
+    comparisons: 0,
+    done: 0,
+    email: null,
+    avatarUrl: null,
+    lastCalibrationDate: null,
+  },
+  tasks: [],
+  budget: {
+    income: 0,
+    items: [],
+  },
+  onboarding: {
+    completed: false,
+    step: 'name',
+    nameDraft: '',
+    selectedIds: [],
+    seedTasks: buildOnboardingSeedTasks(OB_TASKS.slice(0, 4)),
+    pairQueue: buildTournamentPairs(buildOnboardingSeedTasks(OB_TASKS.slice(0, 4))),
+    round: 0,
+  },
+  arena: {
+    mode: 'tasks',
+    progress: 0,
+    totalCommits: 0,
+    championId: null,
+    challengerId: null,
+    rotationIndex: 0,
+    completionVisible: false,
+    lastCompletionAt: null,
+  },
+  runner: {
+    taskId: null,
+    stepIndex: 0,
+    completed: false,
+  },
+};
+
 export const mockRepository = {
   loadSnapshot() {
     return cloneSnapshot(initialSnapshot);
+  },
+  loadSignedOutSnapshot() {
+    return cloneSnapshot(signedOutSnapshot);
+  },
+  loadOnboardingSampleBudget() {
+    return {
+      income: onboardingSampleBudget.income,
+      items: onboardingSampleBudget.items.map((item) => ({ ...item })),
+    };
   },
 };

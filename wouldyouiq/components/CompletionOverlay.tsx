@@ -143,10 +143,12 @@ export function CompletionOverlay({
       <Animated.View style={[styles.root, { opacity: backdropOpacity }]}>
         {confettiOverlay}
         <Animated.View
-          style={{
-            width: '100%',
-            transform: [{ scale: cardScale }, { translateY: cardTranslateY }],
-          }}
+          style={[
+            styles.panel,
+            {
+              transform: [{ scale: cardScale }, { translateY: cardTranslateY }],
+            },
+          ]}
         >
           <LinearGradient colors={['rgba(167,139,250,0.18)', 'rgba(245,200,66,0.07)']} style={styles.card}>
             <Animated.Text style={[styles.badge, { transform: [{ scale: badgeScale }] }]}>🎯</Animated.Text>
@@ -191,10 +193,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
+  panel: {
+    width: '100%',
+    maxWidth: 520,
+  },
   card: {
     width: '100%',
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 22,
+    padding: 14,
     backgroundColor: Colors.s1,
     borderWidth: 1,
     borderColor: Colors.b2,
@@ -204,94 +210,94 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
   },
   badge: {
-    fontSize: 64,
+    fontSize: 34,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   title: {
     fontFamily: Fonts.display,
-    fontSize: 22,
+    fontSize: 16,
     textAlign: 'center',
     color: Colors.t1,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   sub: {
     fontFamily: Fonts.body,
-    fontSize: 13,
+    fontSize: 11,
     textAlign: 'center',
     color: Colors.t2,
-    marginBottom: 18,
-    lineHeight: 20,
+    marginBottom: 10,
+    lineHeight: 16,
   },
   xpRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 20,
+    gap: 8,
+    padding: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.gold,
-    marginBottom: 10,
+    marginBottom: 8,
     backgroundColor: 'rgba(245,200,66,0.08)',
   },
   xpEmoji: {
-    fontSize: 22,
+    fontSize: 18,
   },
   xpLabel: {
     fontFamily: Fonts.display,
-    fontSize: 20,
+    fontSize: 15,
     color: Colors.gold,
   },
   xpSub: {
     fontFamily: Fonts.body,
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.t2,
   },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 16,
-    padding: 10,
+    gap: 8,
+    borderRadius: 14,
+    padding: 9,
     borderWidth: 1,
     borderColor: Colors.gold2,
-    marginBottom: 18,
+    marginBottom: 10,
     backgroundColor: 'rgba(255,159,67,0.08)',
   },
   streakEmoji: {
-    fontSize: 20,
+    fontSize: 16,
   },
   streakLabel: {
     fontFamily: Fonts.bodyBold,
-    fontSize: 14,
+    fontSize: 12,
     color: Colors.gold2,
   },
   streakSub: {
     fontFamily: Fonts.bodyLight,
-    fontSize: 11,
+    fontSize: 9,
     color: Colors.t2,
     marginTop: 2,
   },
   buttons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   primary: {
     flex: 1,
-    borderRadius: 18,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 11,
     backgroundColor: Colors.v2,
     alignItems: 'center',
   },
   primaryText: {
     fontFamily: Fonts.bodyBold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#fff',
   },
   secondary: {
     flex: 1,
-    borderRadius: 18,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 11,
     backgroundColor: Colors.s2,
     borderWidth: 1,
     borderColor: Colors.b2,
@@ -299,7 +305,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontFamily: Fonts.bodyBold,
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.t2,
   },
 });

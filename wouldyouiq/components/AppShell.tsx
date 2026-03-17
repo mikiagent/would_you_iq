@@ -20,7 +20,7 @@ import { Toast } from '@/components/Toast';
 import { Colors, Fonts } from '@/constants/tokens';
 import { isDesktopWidth, Layout } from '@/constants/layout';
 import { useAppStore } from '@/domain/store';
-import { todayKey } from '@/domain/logic';
+import { getLevelInfo, todayKey } from '@/domain/logic';
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -69,10 +69,13 @@ function DesktopShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const startGuidedTour = useAppStore((state) => state.startGuidedTour);
+  const replayOnboarding = useAppStore((state) => state.replayOnboarding);
   const tasks = useAppStore((state) => state.tasks);
+  const user = useAppStore((state) => state.user);
   const { avatarUrl, displayName, email, isSignedIn } = useCloudSync();
-  const storedUser = useAppStore((state) => state.user);
+  const storedUser = user;
   const showTabsChrome = pathname !== '/onboarding' && pathname !== '/runner';
+  const onboardingRoute = pathname === '/onboarding';
   const resolvedAvatarUrl = avatarUrl ?? storedUser.avatarUrl;
   const resolvedName = displayName ?? storedUser.name;
   const resolvedEmail = email ?? storedUser.email;
@@ -95,11 +98,19 @@ function DesktopShell({ children }: { children: ReactNode }) {
   ];
   const phoneHeight = Math.max(700, Math.min(height - 130, 880));
   const phoneWidth = Math.round(phoneHeight * 0.72);
+  const levelInfo = getLevelInfo(user.xp);
 
   if (!showTabsChrome) {
     return (
       <View style={styles.desktopStandalone}>
-        <View style={styles.desktopStandaloneContent}>{children}</View>
+        <View
+          style={[
+            styles.desktopStandaloneContent,
+            onboardingRoute && styles.desktopStandaloneContentFullBleed,
+          ]}
+        >
+          {children}
+        </View>
       </View>
     );
   }
@@ -143,6 +154,16 @@ function DesktopShell({ children }: { children: ReactNode }) {
           <View style={styles.desktopTopActions}>
             <Pressable
               onPress={() => {
+                replayOnboarding();
+                router.replace('/onboarding' as never);
+              }}
+              style={styles.desktopTutorialButton}
+            >
+              <Text style={styles.desktopTutorialIcon}>↺</Text>
+              <Text style={styles.desktopTutorialLabel}>Onboarding</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
                 startGuidedTour();
                 router.replace('/tasks' as never);
               }}
@@ -181,6 +202,23 @@ function DesktopShell({ children }: { children: ReactNode }) {
         </View>
         <View style={styles.desktopFloatingRail}>
           <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
+          {showTabsChrome ? (
+            <View style={styles.desktopLevelCard}>
+              <View style={styles.desktopLevelRow}>
+                <Text style={styles.desktopLevelTitle}>Level {levelInfo.level}</Text>
+                <Text style={styles.desktopLevelMeta}>
+                  {levelInfo.current}/{levelInfo.needed} XP
+                </Text>
+              </View>
+              <View style={styles.desktopStreakRow}>
+                <Text style={styles.desktopStreakEmoji}>🔥</Text>
+                <Text style={styles.desktopStreakLabel}>{user.streak} day streak</Text>
+              </View>
+              <View style={styles.desktopLevelTrack}>
+                <View style={[styles.desktopLevelFill, { width: `${Math.max(6, levelInfo.progress * 100)}%` }]} />
+              </View>
+            </View>
+          ) : null}
         </View>
       </View>
     </View>
@@ -382,6 +420,58 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 78,
+    gap: 14,
+  },
+  desktopLevelCard: {
+    width: 320,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15,13,34,0.92)',
+    borderWidth: 1,
+    borderColor: Colors.b1,
+    gap: 10,
+  },
+  desktopLevelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  desktopLevelTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 18,
+    color: Colors.t1,
+  },
+  desktopLevelMeta: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 12,
+    color: Colors.t2,
+  },
+  desktopStreakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  desktopStreakEmoji: {
+    fontSize: 15,
+  },
+  desktopStreakLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 12,
+    color: Colors.gold,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  desktopLevelTrack: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: Colors.s3,
+    overflow: 'hidden',
+  },
+  desktopLevelFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.gold,
   },
   desktopStandalone: {
     flex: 1,
@@ -394,5 +484,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 760,
+  },
+  desktopStandaloneContentFullBleed: {
+    maxWidth: '100%',
   },
 });

@@ -67,13 +67,14 @@ export interface AppStore extends AppSnapshot {
   setTaskFilter: (filter: TaskFilter) => void;
   toggleTaskExpanded: (taskId: string) => void;
   resetApp: () => void;
+  replayOnboarding: () => void;
   setOnboardingName: (value: string) => void;
   updateUserName: (value: string) => void;
   continueFromName: () => void;
   toggleOnboardingSelection: (id: string) => void;
   startOnboardingTournament: () => void;
   chooseOnboardingWinner: (winnerId: string) => void;
-  finishOnboarding: () => void;
+  finishOnboarding: (options?: { useSampleTasks?: boolean }) => void;
   saveTask: (draft: TaskDraft) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskEssential: (taskId: string) => void;
@@ -141,6 +142,20 @@ export const useAppStore = create<AppStore>()(
           toast: null,
           guidedTour: initialGuidedTourState,
         })),
+      replayOnboarding: () =>
+        set((state) => {
+          const base = mockRepository.loadSignedOutSnapshot();
+
+          return {
+            ...state,
+            onboarding: base.onboarding,
+            guidedTour: initialGuidedTourState,
+            runner: base.runner,
+            arena: base.arena,
+            toast: null,
+            expandedTaskIds: [],
+          };
+        }),
       setOnboardingName: (value) =>
         set((state) => ({
           onboarding: {
@@ -218,9 +233,14 @@ export const useAppStore = create<AppStore>()(
             },
           };
         }),
-      finishOnboarding: () =>
+      finishOnboarding: (options) =>
         set((state) => {
           const seedTasks = sortedTasks(state.onboarding.seedTasks, true);
+          const useSampleTasks = options?.useSampleTasks ?? false;
+          const nextTasks = useSampleTasks ? seedTasks : [];
+          const nextBudget = useSampleTasks
+            ? mockRepository.loadOnboardingSampleBudget()
+            : mockRepository.loadSignedOutSnapshot().budget;
           const name = state.onboarding.nameDraft.trim() || state.user.name;
           const onboarding = {
             ...state.onboarding,
@@ -232,10 +252,11 @@ export const useAppStore = create<AppStore>()(
             pairQueue: buildTournamentPairs(seedTasks),
             round: 0,
           };
-          const nextArena = ensureArenaPair('tasks', seedTasks, state.budget, null, null, 0);
+          const nextArena = ensureArenaPair('tasks', nextTasks, nextBudget, null, null, 0);
 
           return {
-            tasks: seedTasks,
+            tasks: nextTasks,
+            budget: nextBudget,
             user: {
               ...state.user,
               name,

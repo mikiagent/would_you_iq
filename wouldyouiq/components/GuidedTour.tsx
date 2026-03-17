@@ -149,8 +149,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(14,14,28,0.96)',
   },
   cardDesktop: {
-    marginLeft: 160,
-    maxWidth: 620,
+    alignSelf: 'flex-end',
+    maxWidth: 420,
+    marginRight: 20,
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',

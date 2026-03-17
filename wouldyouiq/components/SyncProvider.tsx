@@ -14,6 +14,7 @@ import React, {
 } from 'react';
 
 import { cloudRepository } from '@/data/cloudRepository';
+import { mockRepository } from '@/data/mockRepository';
 import type { AppSnapshot } from '@/domain/models';
 import { useAppStore } from '@/domain/store';
 import { supabase } from '@/lib/supabase';
@@ -384,8 +385,29 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    await AsyncStorage.removeItem(SYNC_META_KEY);
+    await useAppStore.persist.clearStorage();
+
+    const signedOutSnapshot = mockRepository.loadSignedOutSnapshot();
+    useAppStore.setState({
+      ...signedOutSnapshot,
+      hasHydrated: true,
+      toast: null,
+      guidedTour: {
+        active: false,
+        step: 0,
+        completed: false,
+      },
+      tasksView: 'list',
+      budgetView: 'overview',
+      taskFilter: 'all',
+      expandedTaskIds: [],
+    });
+
     setSessionUser(null);
     setHasLoadedCloud(false);
+    setCloudProfile(null);
+    setLastSavedHash(null);
     setSaveState('local');
   }, []);
 
