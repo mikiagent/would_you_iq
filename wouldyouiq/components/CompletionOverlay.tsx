@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 
 import { Colors, Fonts } from '@/constants/tokens';
 import { useConfettiOverlay } from '@/components/ConfettiLayer';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 
 type Props = {
   visible: boolean;
@@ -32,6 +33,7 @@ export function CompletionOverlay({
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
   const { confettiOverlay, triggerConfetti } = useConfettiOverlay();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!visible) {
@@ -45,6 +47,22 @@ export function CompletionOverlay({
     }
 
     setMounted(true);
+
+    if (reduceMotion) {
+      // Jump-cut: show the finished state without the celebration sequence.
+      backdropOpacity.setValue(1);
+      cardScale.setValue(1);
+      cardTranslateY.setValue(0);
+      badgeScale.setValue(1);
+      titleOpacity.setValue(1);
+      titleTranslateY.setValue(0);
+      xpOpacity.setValue(1);
+      streakOpacity.setValue(1);
+      buttonOpacity.setValue(1);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
+
     backdropOpacity.setValue(0);
     cardScale.setValue(0.92);
     cardTranslateY.setValue(26);
@@ -126,6 +144,7 @@ export function CompletionOverlay({
     buttonOpacity,
     cardScale,
     cardTranslateY,
+    reduceMotion,
     streakOpacity,
     titleOpacity,
     titleTranslateY,

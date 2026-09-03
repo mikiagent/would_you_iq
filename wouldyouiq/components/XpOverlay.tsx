@@ -2,12 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Fonts } from '@/constants/tokens';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 
 type XpBurst = { id: number; value: number; left: number };
 
 export function useXpOverlay() {
   const [bursts, setBursts] = useState<XpBurst[]>([]);
   const width = Dimensions.get('window').width;
+  const reduceMotion = useReducedMotion();
 
   const trigger = useCallback((value: number) => {
     const base = width * 0.5 - 58;
@@ -22,6 +24,7 @@ export function useXpOverlay() {
           key={burst.id}
           value={burst.value}
           left={burst.left}
+          reduceMotion={reduceMotion}
           onDone={() => {
             setBursts((prev) => prev.filter((entry) => entry.id !== burst.id));
           }}
@@ -36,10 +39,12 @@ export function useXpOverlay() {
 function XpFloat({
   value,
   left,
+  reduceMotion,
   onDone,
 }: {
   value: number;
   left: number;
+  reduceMotion: boolean;
   onDone: () => void;
 }) {
   const translateY = useRef(new Animated.Value(8)).current;
@@ -48,6 +53,18 @@ function XpFloat({
   const scale = useRef(new Animated.Value(0.7)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      // Static fade: show the XP without motion, then dismiss.
+      translateY.setValue(0);
+      scale.setValue(1);
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+        Animated.delay(700),
+        Animated.timing(opacity, { toValue: 0, duration: 160, useNativeDriver: true }),
+      ]).start(onDone);
+      return;
+    }
+
     Animated.parallel([
       Animated.parallel([
         Animated.timing(translateY, {
@@ -93,7 +110,7 @@ function XpFloat({
         ]),
       ]),
     ]).start(onDone);
-  }, [onDone, opacity, scale, translateX, translateY]);
+  }, [onDone, opacity, reduceMotion, scale, translateX, translateY]);
 
   return (
     <Animated.View

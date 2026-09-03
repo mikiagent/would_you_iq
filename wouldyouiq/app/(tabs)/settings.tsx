@@ -1,13 +1,40 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { useCloudSync } from '@/components/SyncProvider';
 import { ActionButton, Field, PageHeader, Sheet, Surface } from '@/components/primitives';
 import { Layout, isDesktopWidth } from '@/constants/layout';
+import { Links } from '@/constants/links';
 import { Colors, Fonts } from '@/constants/tokens';
 import { useAppStore } from '@/domain/store';
+import { clearAiConsent, getAiConsent } from '@/lib/aiConsent';
+
+function confirmDestructive(title: string, message: string, actionLabel: string, onConfirm: () => void) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: actionLabel, style: 'destructive', onPress: onConfirm },
+  ]);
+}
 
 export default function SettingsScreen() {
   const { width } = useWindowDimensions();
@@ -15,13 +42,57 @@ export default function SettingsScreen() {
   const updateUserName = useAppStore((state) => state.updateUserName);
   const resetApp = useAppStore((state) => state.resetApp);
   const startGuidedTour = useAppStore((state) => state.startGuidedTour);
-  const { avatarUrl, displayName, email, isSignedIn, signInWithGoogle, signOut } = useCloudSync();
+  const showToast = useAppStore((state) => state.showToast);
+  const {
+    avatarUrl,
+    displayName,
+    email,
+    isSignedIn,
+    isAppleSignInAvailable,
+    signInWithGoogle,
+    signInWithApple,
+    signOut,
+    deleteAccount,
+  } = useCloudSync();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState(user.name);
+  const [hasAiConsent, setHasAiConsent] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
   const resolvedAvatarUrl = avatarUrl ?? user.avatarUrl;
   const resolvedName = displayName ?? user.name;
   const resolvedEmail = email ?? user.email;
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  useEffect(() => {
+    getAiConsent().then((record) => setHasAiConsent(!!record));
+  }, []);
+
+  const handleDeleteAccount = () => {
+    confirmDestructive(
+      'Delete account?',
+      'This permanently deletes your account and all cloud data (profile, tasks, budget, and sync history). Data saved on this device is also reset. This cannot be undone.',
+      'Delete',
+      () => {
+        confirmDestructive(
+          'Are you sure?',
+          'Your account and cloud data will be permanently deleted.',
+          'Delete forever',
+          () => {
+            setIsDeletingAccount(true);
+            deleteAccount()
+              .then(() => {
+                showToast({ icon: '🗑️', title: 'Account deleted', subtitle: 'Your account and cloud data were removed.' });
+              })
+              .catch((err: Error) => {
+                showToast({ icon: '⚠️', title: 'Deletion failed', subtitle: err.message || 'Try again.' });
+              })
+              .finally(() => setIsDeletingAccount(false));
+          },
+        );
+      },
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -36,9 +107,11 @@ export default function SettingsScreen() {
           <ProfileAvatar avatarUrl={resolvedAvatarUrl} label={resolvedName} size={72} />
           <Text style={styles.profileName}>{resolvedName}</Text>
           <Text style={styles.profileSub}>
-            {isSignedIn ? resolvedEmail ?? 'Signed in with Google' : 'Use Google sign-in to sync this device to Supabase.'}
+            {isSignedIn
+              ? resolvedEmail ?? 'Signed in'
+              : 'Sign in to back up and sync your data across devices. Everything also works without an account.'}
           </Text>
-          <View style={styles.profileActionsRow}>
+          <View style={styles.profileActionsColumn}>
             <ActionButton
               label="Edit Profile"
               tone="primary"
@@ -46,36 +119,85 @@ export default function SettingsScreen() {
                 setName(user.name);
                 setSheetOpen(true);
               }}
-              style={styles.profileActionButton}
             />
+            {isSignedIn ? (
+              <ActionButton
+                label="Sign Out"
+                onPress={() => {
+                  void signOut();
+                }}
+              />
+            ) : (
+              <>
+                {isAppleSignInAvailable ? (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                    cornerRadius={14}
+                    style={styles.appleButton}
+                    onPress={() => {
+                      signInWithApple().catch(() => {
+                        showToast({ icon: '⚠️', title: 'Apple sign-in failed', subtitle: 'Try again.' });
+                      });
+                    }}
+                  />
+                ) : null}
+                <ActionButton
+                  label="Continue with Google"
+                  onPress={() => {
+                    signInWithGoogle().catch(() => {
+                      showToast({ icon: '⚠️', title: 'Google sign-in failed', subtitle: 'Try again.' });
+                    });
+                  }}
+                />
+              </>
+            )}
+          </View>
+        </Surface>
+
+        <Surface style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>About & Privacy</Text>
+          <ActionButton
+            label="Privacy Policy"
+            onPress={() => {
+              void WebBrowser.openBrowserAsync(Links.privacyPolicy);
+            }}
+          />
+          <ActionButton
+            label="Support"
+            onPress={() => {
+              void WebBrowser.openBrowserAsync(Links.support);
+            }}
+          />
+          {hasAiConsent ? (
             <ActionButton
-              label={isSignedIn ? 'Sign Out' : 'Continue with Google'}
+              label="Revoke AI Import Consent"
               onPress={() => {
-                void (isSignedIn ? signOut() : signInWithGoogle());
+                void clearAiConsent().then(() => {
+                  setHasAiConsent(false);
+                  showToast({ icon: '🔒', title: 'Consent revoked', subtitle: 'Syllabus import will ask again before sending anything.' });
+                });
               }}
-              style={styles.profileActionButton}
             />
-          </View>
+          ) : (
+            <Text style={styles.sectionNote}>
+              AI syllabus import is off until you give consent on the Syllabus screen.
+            </Text>
+          )}
+          <Text style={styles.sectionNote}>Version {appVersion}</Text>
         </Surface>
 
-        <Surface style={styles.planCard}>
-          <Text style={styles.planEyebrow}>Upgrade</Text>
-          <Text style={styles.planTitle}>WouldYouIQ Pro</Text>
-          <Text style={styles.planBody}>
-            Unlock deeper coaching, premium calibration insights, richer trend tracking, and a more personalized system that keeps your priorities synced everywhere.
-          </Text>
-          <View style={styles.planHighlights}>
-            <Text style={styles.planHighlight}>Priority reports with longer-term patterns</Text>
-            <Text style={styles.planHighlight}>Smarter budget recommendations</Text>
-            <Text style={styles.planHighlight}>Cross-device sync and premium backup feel</Text>
-          </View>
-          <ActionButton label="Upgrade to Pro" tone="primary" onPress={() => {}} />
-          <Text style={styles.planFootnote}>
-            Local changes already save on-device first. Signing in adds cloud save every 5 minutes or anytime you tap Save.
-          </Text>
-        </Surface>
-
-        <ActionButton label="Reset Demo Data" onPress={resetApp} />
+        <ActionButton
+          label="Reset App Data"
+          onPress={() => {
+            confirmDestructive(
+              'Reset app data?',
+              'This clears all tasks, budget items, and progress stored on this device. This cannot be undone.',
+              'Reset',
+              resetApp,
+            );
+          }}
+        />
         <ActionButton
           label="Replay App Tour"
           onPress={() => {
@@ -83,6 +205,19 @@ export default function SettingsScreen() {
             router.replace('/(tabs)/tasks');
           }}
         />
+
+        {isSignedIn ? (
+          <Surface style={styles.dangerCard}>
+            <Text style={styles.dangerTitle}>Danger zone</Text>
+            <Text style={styles.sectionNote}>
+              Permanently delete your account and all cloud data.
+            </Text>
+            <ActionButton
+              label={isDeletingAccount ? 'Deleting…' : 'Delete Account & Data'}
+              onPress={handleDeleteAccount}
+            />
+          </Surface>
+        ) : null}
         </ScrollView>
       </View>
 
@@ -165,52 +300,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  profileActionsRow: {
-    flexDirection: 'row',
+  profileActionsColumn: {
     gap: 12,
     width: '100%',
     maxWidth: 440,
   },
-  profileActionButton: {
-    flex: 1,
+  appleButton: {
+    width: '100%',
+    height: 48,
   },
-  planCard: {
-    padding: 22,
+  sectionCard: {
+    padding: 20,
     gap: 12,
     width: '100%',
-    borderColor: 'rgba(245,200,66,0.24)',
-    backgroundColor: 'rgba(245,200,66,0.05)',
   },
-  planEyebrow: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 11,
-    color: Colors.gold,
-    textTransform: 'uppercase',
-    letterSpacing: 1.3,
-  },
-  planTitle: {
+  sectionTitle: {
     fontFamily: Fonts.display,
-    fontSize: 28,
-    color: Colors.gold,
-  },
-  planBody: {
-    fontFamily: Fonts.bodyLight,
-    fontSize: 15,
-    color: Colors.t2,
-    lineHeight: 24,
-  },
-  planHighlights: {
-    gap: 8,
-  },
-  planHighlight: {
-    fontFamily: Fonts.body,
-    fontSize: 14,
+    fontSize: 20,
     color: Colors.t1,
   },
-  planFootnote: {
+  sectionNote: {
     fontFamily: Fonts.bodyLight,
     fontSize: 12,
     color: Colors.t2,
     lineHeight: 20,
+  },
+  dangerCard: {
+    padding: 20,
+    gap: 12,
+    width: '100%',
+    borderColor: 'rgba(255,99,99,0.28)',
+    backgroundColor: 'rgba(255,99,99,0.05)',
+  },
+  dangerTitle: {
+    fontFamily: Fonts.display,
+    fontSize: 20,
+    color: '#ff8a8a',
   },
 });

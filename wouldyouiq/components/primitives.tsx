@@ -51,8 +51,11 @@ export function PageHeader({
             void manualSave();
           }}
           disabled={!isSignedIn || isSaving}
+          accessibilityRole="button"
+          accessibilityLabel={`Save to cloud. ${saveLabel}`}
+          accessibilityState={{ disabled: !isSignedIn || isSaving, busy: isSaving }}
         >
-          <Text style={styles.saveButtonLabel}>Save</Text>
+          <Text maxFontSizeMultiplier={1.4} style={styles.saveButtonLabel}>Save</Text>
         </Pressable>
         {right ? <View>{right}</View> : null}
       </View>
@@ -115,6 +118,9 @@ export function SegmentedControl<T extends string>({
             key={item.value}
             style={[styles.segment, active && styles.segmentActive]}
             onPress={() => onChange(item.value)}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected: active }}
           >
             <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
               {item.label}
@@ -141,7 +147,7 @@ export function ActionButton({
 }) {
   if (tone === 'primary') {
     return (
-      <Pressable onPress={onPress} style={style}>
+      <Pressable onPress={onPress} style={style} accessibilityRole="button" accessibilityLabel={label}>
         <LinearGradient colors={[Colors.v2, Colors.violet]} style={[styles.button, styles.primary]}>
           {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
           <Text style={styles.primaryLabel}>{label}</Text>
@@ -153,6 +159,8 @@ export function ActionButton({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       style={[
         styles.button,
         tone === 'success' ? styles.successButton : styles.secondaryButton,
@@ -165,9 +173,14 @@ export function ActionButton({
   );
 }
 
-export function Fab({ onPress }: { onPress: () => void }) {
+export function Fab({ onPress, label = 'Add' }: { onPress: () => void; label?: string }) {
   return (
-    <Pressable style={styles.fabWrap} onPress={onPress}>
+    <Pressable
+      style={styles.fabWrap}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <LinearGradient colors={[Colors.v2, Colors.violet]} style={styles.fab}>
         <Text style={styles.fabLabel}>+</Text>
       </LinearGradient>
@@ -192,7 +205,12 @@ export function Sheet({
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.sheetBackdrop, desktop && styles.sheetBackdropDesktop]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
         <View style={[styles.sheet, desktop && styles.sheetDesktop]}>
           <View style={[styles.sheetHandle, desktop && styles.sheetHandleDesktop]} />
           <Text style={styles.sheetTitle}>{title}</Text>
@@ -228,6 +246,7 @@ export function Field({
         placeholderTextColor={Colors.t3}
         style={styles.input}
         keyboardType={keyboardType}
+        accessibilityLabel={label}
       />
     </View>
   );
@@ -250,7 +269,13 @@ export function ToggleRow({
         <Text style={styles.toggleLabel}>{label}</Text>
         <Text style={styles.toggleSubtitle}>{subtitle}</Text>
       </View>
-      <Pressable onPress={onPress} style={[styles.toggle, active && styles.toggleActive]}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="switch"
+        accessibilityLabel={label}
+        accessibilityState={{ checked: active }}
+        style={[styles.toggle, active && styles.toggleActive]}
+      >
         <View style={[styles.toggleThumb, active && styles.toggleThumbActive]} />
       </Pressable>
     </View>

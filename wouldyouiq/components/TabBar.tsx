@@ -16,10 +16,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.container, desktop && styles.containerDesktop]}>
       {state.routes.map((route, index) => {
-        if (route.name === 'ai-magic') {
-          return null;
-        }
-
         const isFocused = state.index === index;
         const { options } = descriptors[route.key];
         if ((options as { href?: string | null }).href === null) {
@@ -50,9 +46,16 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         };
 
         return (
-          <Pressable key={route.key} onPress={onPress} style={[styles.item, desktop && styles.itemDesktop]}>
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            accessibilityRole="tab"
+            accessibilityLabel={label as string}
+            accessibilityState={{ selected: isFocused }}
+            style={[styles.item, desktop && styles.itemDesktop]}
+          >
             <View style={styles.iconWrap}>{icon}</View>
-            <Text style={[styles.label, isFocused && styles.labelActive]}>{label as string}</Text>
+            <Text maxFontSizeMultiplier={1.4} style={[styles.label, isFocused && styles.labelActive]}>{label as string}</Text>
             <View style={[styles.underline, isFocused && styles.underlineActive]} />
           </Pressable>
         );

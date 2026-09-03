@@ -2,6 +2,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
+import { useReducedMotion } from '@/lib/useReducedMotion';
+
 type Burst = {
   id: number;
   x: number;
@@ -18,8 +20,12 @@ type TriggerOptions = {
 export function useConfettiOverlay() {
   const [bursts, setBursts] = useState<Burst[]>([]);
   const viewport = useMemo(() => Dimensions.get('window'), []);
+  const reduceMotion = useReducedMotion();
 
   const triggerConfetti = useCallback((options: TriggerOptions = {}) => {
+    if (reduceMotion) {
+      return;
+    }
     const count = options.count ?? 42;
     const x = options.x ?? viewport.width / 2;
     const y = options.y ?? viewport.height * 0.42;
@@ -33,7 +39,7 @@ export function useConfettiOverlay() {
         count,
       },
     ]);
-  }, [viewport.height, viewport.width]);
+  }, [reduceMotion, viewport.height, viewport.width]);
 
   const overlay = (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

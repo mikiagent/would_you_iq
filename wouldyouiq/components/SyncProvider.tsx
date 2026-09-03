@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -17,6 +19,7 @@ import { cloudRepository } from '@/data/cloudRepository';
 import { mockRepository } from '@/data/mockRepository';
 import type { AppSnapshot } from '@/domain/models';
 import { useAppStore } from '@/domain/store';
+import { clearAiConsent } from '@/lib/aiConsent';
 import { supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -43,7 +46,10 @@ type SyncContextValue = {
   email: string | null;
   displayName: string | null;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  isAppleSignInAvailable: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   manualSave: () => Promise<void>;
 };
 
@@ -64,8 +70,7 @@ function getSnapshot(state: ReturnType<typeof useAppStore.getState>): AppSnapsho
 
 function getUserIdentity(sessionUser: any) {
   const metadata = sessionUser?.user_metadata ?? {};
-  const identityData = sessionUser?.identities?.find?.((identity: any) => identity?.provider === 'google')
-    ?.identity_data ?? sessionUser?.identities?.[0]?.identity_data ?? {};
+  const identityData = sessionUser?.identities?.[0]?.identity_data ?? {};
   return {
     id: sessionUser?.id ?? null,
     email: sessionUser?.email ?? null,
@@ -118,6 +123,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasLoadedCloud, setHasLoadedCloud] = useState(false);
   const [cloudProfile, setCloudProfile] = useState<CloudProfile | null>(null);
+  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    let isMounted = true;
+    AppleAuthentication.isAvailableAsync()
+      .then((available) => {
+        if (isMounted) setIsAppleSignInAvailable(available);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const isSignedIn = !!sessionUser?.id;
   const isDirty = isSignedIn ? snapshotHash !== lastSavedHash : true;
@@ -355,10 +374,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       options: {
         redirectTo,
         skipBrowserRedirect: true,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
       },
     });
 
@@ -380,6 +395,56 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       throw exchangeError;
+    }
+  }, []);
+
+  const signInWithApple = useCallback(async () => {
+    if (Platform.OS !== 'ios') {
+      throw new Error('Sign in with Apple is only available on iOS.');
+    }
+
+    const rawNonce = Crypto.randomUUID();
+    const hashedNonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      rawNonce,
+    );
+
+    let credential: AppleAuthentication.AppleAuthenticationCredential;
+    try {
+      credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+    } catch (err: any) {
+      if (err?.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
+      throw err;
+    }
+
+    if (!credential.identityToken) {
+      throw new Error('Apple sign-in did not return an identity token.');
+    }
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: credential.identityToken,
+      nonce: rawNonce,
+    });
+    if (error) {
+      throw error;
+    }
+
+    // Apple only provides the name on the first authorization — persist it.
+    const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (fullName && data.user && !data.user.user_metadata?.full_name) {
+      await supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => {});
     }
   }, []);
 
@@ -411,6 +476,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     setSaveState('local');
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
+    if (error) {
+      throw new Error('Account deletion failed. Check your connection and try again.');
+    }
+
+    await clearAiConsent();
+    await signOut();
+  }, [signOut]);
+
   const value = useMemo<SyncContextValue>(
     () => ({
       isSignedIn,
@@ -431,18 +506,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       email: identity.email,
       displayName: identity.name,
       signInWithGoogle,
+      signInWithApple,
+      isAppleSignInAvailable,
       signOut,
+      deleteAccount,
       manualSave,
     }),
     [
+      deleteAccount,
       identity.avatarUrl,
       identity.email,
       identity.name,
+      isAppleSignInAvailable,
       isDirty,
       isSaving,
       isSignedIn,
       manualSave,
       saveState,
+      signInWithApple,
       signInWithGoogle,
       signOut,
     ],

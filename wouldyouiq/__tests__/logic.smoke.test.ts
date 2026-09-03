@@ -12,6 +12,7 @@ import {
   sortedTasks,
 } from '../domain/logic.ts';
 import { OB_TASKS } from '../constants/onboarding.ts';
+import { assignmentToTaskDraft, deriveDeadline } from '../lib/syllabusMapping.ts';
 
 test('budget totals compute leftover and spent percent', () => {
   const snapshot = mockRepository.loadSnapshot();
@@ -60,4 +61,46 @@ test('runner step logic advances until completion', () => {
 
   assert.equal(result.done, false);
   assert.equal(result.nextIndex, 1);
+});
+
+test('syllabus due dates map onto deadline buckets', () => {
+  const now = new Date('2026-09-03T10:00:00');
+
+  assert.equal(deriveDeadline(null, now), null);
+  assert.equal(deriveDeadline('2026-09-03', now), 'today');
+  assert.equal(deriveDeadline('2026-09-04', now), 'today');
+  assert.equal(deriveDeadline('2026-09-07', now), 'this week');
+  assert.equal(deriveDeadline('2026-09-10', now), 'this week');
+  assert.equal(deriveDeadline('2026-09-11', now), null);
+  assert.equal(deriveDeadline('not-a-date', now), null);
+});
+
+test('assignments convert to task drafts with due date in detail', () => {
+  const now = new Date('2026-09-03T10:00:00');
+  const draft = assignmentToTaskDraft(
+    {
+      title: 'Problem set 3',
+      detail: 'CS 201, submit on Canvas',
+      dueDate: '2026-09-05',
+      emoji: '🧮',
+      estimatedDuration: '90 min',
+    },
+    now,
+  );
+
+  assert.equal(draft.n, 'Problem set 3');
+  assert.equal(draft.dl, 'this week');
+  assert.equal(draft.ess, true);
+  assert.ok(draft.detail?.startsWith('Due '));
+  assert.ok(draft.detail?.includes('CS 201, submit on Canvas'));
+
+  const undated = assignmentToTaskDraft(
+    { title: 'Read chapter 4', detail: '', dueDate: null, emoji: '', estimatedDuration: '' },
+    now,
+  );
+  assert.equal(undated.dl, null);
+  assert.equal(undated.ess, false);
+  assert.equal(undated.e, '📚');
+  assert.equal(undated.t, '30 min');
+  assert.equal(undated.detail, undefined);
 });

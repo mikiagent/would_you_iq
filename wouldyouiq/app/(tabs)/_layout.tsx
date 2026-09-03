@@ -47,16 +47,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="syllabus"
+        options={{
+          tabBarLabel: 'Syllabus',
+          tabBarIcon: () => <TabLabel icon="📚" />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           tabBarLabel: 'Settings',
           tabBarIcon: () => <TabLabel icon="⚙️" />,
-        }}
-      />
-      <Tabs.Screen
-        name="ai-magic"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

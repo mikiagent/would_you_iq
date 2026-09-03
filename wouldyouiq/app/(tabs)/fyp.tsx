@@ -312,8 +312,13 @@ export default function ForYouScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <Text style={styles.headerTitle}>For You</Text>
-            <Pressable style={styles.magicButton} onPress={() => router.push('/(tabs)/ai-magic')}>
-              <Text style={styles.magicButtonLabel}>✨ AI Magic</Text>
+            <Pressable
+              style={styles.magicButton}
+              onPress={() => router.push('/(tabs)/syllabus')}
+              accessibilityRole="button"
+              accessibilityLabel="Import a syllabus"
+            >
+              <Text style={styles.magicButtonLabel}>📚 Syllabus</Text>
             </Pressable>
           </View>
         </View>
