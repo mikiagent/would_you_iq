@@ -21,11 +21,50 @@ import {
   syncCompletedProjectColumns,
 } from '../domain/taskWorkspace.ts';
 import { pickTaskDropTarget } from '../domain/taskDrag.ts';
+import { cloudSyllabi, mergeSyllabi, recoverSyllabusScans } from '../domain/syllabusDocuments.ts';
+import { decodeBase64, encodeBase64, validateSource, safeSyllabusFilename, MAX_SYLLABUS_FILE_BYTES } from '../lib/syllabusFiles.ts';
+import type { SyllabusDocument } from '../domain/models.ts';
 
-test('a clean start has no demo tasks, budget, or progress', () => {
+test('syllabus bytes round trip and file limits measure actual UTF-8 and binary sizes', () => {
+  const bytes = Uint8Array.from([0, 255, 37, 80, 68, 70, 13, 10, 128]);
+  assert.deepEqual(new Uint8Array(decodeBase64(encodeBase64(bytes.buffer))), bytes);
+  assert.equal(validateSource(encodeBase64(bytes.buffer), 'pdf'), bytes.byteLength);
+  assert.equal(validateSource('café 📚', 'text'), Buffer.byteLength('café 📚'));
+  assert.throws(() => validateSource('é'.repeat(MAX_SYLLABUS_FILE_BYTES / 2 + 1), 'text'), /5 MB/);
+  assert.throws(() => validateSource('   ', 'text'), /Choose/);
+  assert.throws(() => validateSource('invalid base64 !!!', 'pdf'));
+  assert.equal(safeSyllabusFilename('../../course plan.pdf', 'pdf'), 'course-plan.pdf');
+});
+
+test('syllabus sync preserves device files without exporting local paths or another account data', () => {
+  const document: SyllabusDocument = {
+    id: 'doc-1', ownerId: 'owner-a', projectId: DEFAULT_TASK_PROJECT_ID,
+    name: 'Math syllabus', filename: 'syllabus.txt', kind: 'text', mimeType: 'text/plain',
+    byteSize: 10, localUri: 'file:///device/syllabus.txt', remotePath: 'owner-a/doc-1/syllabus.txt',
+    textContent: 'private source', storageStatus: 'synced', extractionStatus: 'extracting',
+    extractionError: null, assignments: [{id:'homework',title:'Homework 1',detail:'',dueDate:'2026-09-12',emoji:'📚',estimatedDuration:'30 min'}],
+    createdAt: 1, updatedAt: 1, extractedAt: null,
+  };
+  const offline = {...document, id:'offline', remotePath:null, storageStatus:'local' as const};
+  const exported = cloudSyllabi([document, offline], 'owner-a');
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].localUri, null);
+  assert.equal(exported[0].textContent, undefined);
+  assert.equal(exported[0].assignments[0].dueDate, '2026-09-12');
+  const merged = mergeSyllabi(exported, [document, offline], 'owner-a');
+  assert.equal(merged.length, 2);
+  assert.equal(merged.find(d=>d.id==='doc-1')?.localUri, document.localUri);
+  assert.deepEqual(mergeSyllabi(exported, [document, offline], 'owner-b'), []);
+  assert.deepEqual(cloudSyllabi([document], 'owner-b'), []);
+  assert.equal(recoverSyllabusScans(merged)[0].extractionStatus, 'error');
+  assert.deepEqual(recoverSyllabusScans(undefined), []);
+});
+
+test('a clean start has no demo tasks, syllabi, budget, or progress', () => {
   const snapshot = mockRepository.loadSignedOutSnapshot();
 
   assert.equal(snapshot.tasks.length, 0);
+  assert.equal(snapshot.syllabi.length, 0);
   assert.equal(snapshot.budget.income, 0);
   assert.equal(snapshot.budget.items.length, 0);
   assert.equal(snapshot.user.xp, 0);

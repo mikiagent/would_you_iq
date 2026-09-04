@@ -8,24 +8,34 @@ export {
   type ExtractedAssignment,
 } from '@/lib/syllabusMapping';
 
-export type SyllabusSourceKind = 'pdf' | 'image' | 'text';
+export type { SyllabusSourceKind } from '@/domain/models';
+import type { SyllabusSourceKind } from '@/domain/models';
 
 // Raw-file cap enforced before base64 encoding; the edge function enforces
 // a matching cap server-side.
-export const MAX_SYLLABUS_FILE_BYTES = 5 * 1024 * 1024;
+export { MAX_SYLLABUS_FILE_BYTES } from '@/lib/syllabusFiles';
 
 export async function extractAssignments({
   kind,
   data,
   filename,
+  ownerId,
+  mimeType,
 }: {
   kind: SyllabusSourceKind;
   data: string;
   filename?: string;
+  ownerId?: string;
+  mimeType?: string;
 }): Promise<ExtractedAssignment[]> {
+  const { data: auth } = await supabase.auth.getSession();
+  if (!auth.session || (ownerId && auth.session.user.id !== ownerId)) {
+    throw new Error('Sign in to the account that owns this syllabus.');
+  }
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const { data: result, error } = await supabase.functions.invoke('syllabus-extract', {
-    body: { kind, data, filename, timezone },
+    headers: { Authorization: `Bearer ${auth.session.access_token}` },
+    body: { kind, data, filename, timezone, mimeType },
   });
 
   if (error) {

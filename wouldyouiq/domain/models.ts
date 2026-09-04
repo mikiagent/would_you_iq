@@ -80,6 +80,42 @@ export interface TaskWorkspace {
   preferences: TaskWorkspacePreferences;
 }
 
+export type SyllabusSourceKind = 'pdf' | 'image' | 'text';
+
+export type SyllabusStorageStatus = 'local' | 'synced';
+
+export type SyllabusExtractionStatus = 'not_started' | 'extracting' | 'ready' | 'error';
+
+export interface SyllabusAssignment {
+  id: string;
+  title: string;
+  detail: string;
+  dueDate: string | null;
+  emoji: string;
+  estimatedDuration: string;
+}
+
+export interface SyllabusDocument {
+  id: string;
+  ownerId: string;
+  projectId: string;
+  name: string;
+  filename: string;
+  kind: SyllabusSourceKind;
+  mimeType: string;
+  byteSize: number;
+  localUri: string | null;
+  remotePath: string | null;
+  textContent?: string;
+  storageStatus: SyllabusStorageStatus;
+  extractionStatus: SyllabusExtractionStatus;
+  extractionError: string | null;
+  assignments: SyllabusAssignment[];
+  createdAt: number;
+  updatedAt: number;
+  extractedAt: number | null;
+}
+
 export interface TaskProjectDraft {
   id?: string;
   code: string;
@@ -219,6 +255,7 @@ export interface AppSnapshot {
   user: User;
   tasks: Task[];
   taskWorkspace: TaskWorkspace;
+  syllabi: SyllabusDocument[];
   budget: Budget;
   onboarding: OnboardingState;
   arena: ArenaState;

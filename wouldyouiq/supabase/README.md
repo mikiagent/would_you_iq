@@ -10,8 +10,9 @@ Run the migrations in order in the **Supabase Dashboard → SQL Editor** (or via
 | **002** | Adds `profiles.avatar_url` and `profiles.email`; updates triggers so new users get name/avatar/email from the auth provider, and profile is updated when auth user is updated. |
 | **003** | Adds the `app_state` jsonb snapshot table used by cloud sync. |
 | **004** | Adds `ai_usage` daily counters for the syllabus-extract rate limit (service-role only; RLS with no client policies). |
+| **005** | Creates the private `syllabi` storage bucket, 5 MB upload limit, and owner-only file access policies. Source metadata and extracted homework remain in `app_state`. |
 
-Fresh project: run 001 → 002 → 003 → 004 in order. Existing project: run only the ones you haven't applied.
+Fresh project: run 001 → 002 → 003 → 004 → 005 in order. Existing project: run only the ones you haven't applied.
 
 ## Edge functions
 

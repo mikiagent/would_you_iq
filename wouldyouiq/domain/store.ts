@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { OB_TASKS } from '@/constants/onboarding';
+import { recoverSyllabusScans } from './syllabusDocuments';
 import { mockRepository } from '@/data/mockRepository';
 import {
   applyArenaResult,
@@ -37,6 +38,7 @@ import type {
   TaskInsight,
   TaskProjectDraft,
   TaskSortMode,
+  SyllabusDocument,
   SubtaskDraft,
   TasksView,
   ToastState,
@@ -54,7 +56,7 @@ const COMPLETION_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 type PersistedState = Pick<
   AppStore,
-  'user' | 'tasks' | 'taskWorkspace' | 'budget' | 'onboarding' | 'arena' | 'runner' | 'guidedTour'
+  'user' | 'tasks' | 'taskWorkspace' | 'syllabi' | 'budget' | 'onboarding' | 'arena' | 'runner' | 'guidedTour'
 >;
 
 const initialGuidedTourState: GuidedTourState = {
@@ -91,6 +93,8 @@ export interface AppStore extends AppSnapshot {
   addTaskBoardColumn: () => void;
   removeTaskBoardColumn: (columnId: string) => void;
   moveTaskToProject: (taskId: string, projectId: string) => void;
+  upsertSyllabus: (document: SyllabusDocument) => void;
+  deleteSyllabus: (documentId: string) => void;
   resetApp: () => void;
   replayOnboarding: () => void;
   setOnboardingName: (value: string) => void;
@@ -313,6 +317,16 @@ export const useAppStore = create<AppStore>()(
             taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
           };
         }),
+      upsertSyllabus: (document) =>
+        set((state) => ({
+          syllabi: state.syllabi.some((entry) => entry.id === document.id)
+            ? state.syllabi.map((entry) => (entry.id === document.id ? document : entry))
+            : [document, ...state.syllabi],
+        })),
+      deleteSyllabus: (documentId) =>
+        set((state) => ({
+          syllabi: state.syllabi.filter((document) => document.id !== documentId),
+        })),
       resetApp: () =>
         set(() => ({
           ...mockRepository.loadSignedOutSnapshot(),
@@ -1207,6 +1221,7 @@ export const useAppStore = create<AppStore>()(
         user: state.user,
         tasks: state.tasks,
         taskWorkspace: state.taskWorkspace,
+        syllabi: state.syllabi,
         budget: state.budget,
         onboarding: state.onboarding,
         arena: state.arena,
@@ -1214,6 +1229,7 @@ export const useAppStore = create<AppStore>()(
         guidedTour: state.guidedTour,
       }),
       onRehydrateStorage: () => (state) => {
+        if (state) state.syllabi = recoverSyllabusScans(state.syllabi);
         state?.setHasHydrated(true);
       },
     },

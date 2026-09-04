@@ -16,7 +16,7 @@
         <a href="../support/">Support</a>
       </nav>
       <h1>Privacy policy</h1>
-      <p class="meta">Effective September 3, 2026</p>
+      <p class="meta">Effective September 4, 2026</p>
       <p class="lede">
         WouldYouIQ works without an account. Tasks, budget entries, ranking choices, and progress stay
         on your device unless you choose cloud sync or use AI syllabus import.
@@ -52,6 +52,12 @@
 
       <h2>Optional AI syllabus import</h2>
       <p>
+        In Tasks &gt; Context, choosing "Store syllabus" uploads the PDF, photo, or pasted text to
+        private Supabase Storage. The app stores the source's filename, course association, and any
+        extracted homework and exact due dates with your account. Native apps also keep a local copy.
+        Uploading a source does not send it to an AI provider. You can open or delete each stored syllabus.
+      </p>
+      <p>
         Syllabus import requires an account and a separate consent step. If you agree and start an import,
         the PDF, photo, or text you selected is sent through a Supabase Edge Function to OpenRouter and a
         routed Anthropic model endpoint. The content is used only to extract assignments for your review.
@@ -64,7 +70,8 @@
         enforce the import limit. The count is deleted with your account.
       </p>
       <p>
-        AI output can be wrong. You review and edit extracted assignments before saving them. You can
+        AI output can be wrong. Extracted assignments are saved with their source for review; they are
+        not automatically converted into tasks. You can
         decline AI consent and continue using every non-AI part of the app.
       </p>
 
@@ -72,7 +79,8 @@
       <p>
         The app opens Apple's system pickers when you choose a syllabus PDF or photo. It receives only the
         item you select. It does not scan your photo library or upload other files. A selected item is sent
-        off the device only after you start AI import and grant consent.
+        to your private storage when you choose "Store syllabus." It is sent to an AI provider only
+        when you request a scan and grant separate AI consent.
       </p>
 
       <h2>Service providers</h2>
@@ -93,7 +101,7 @@
       <p>
         Local app data remains until you reset the app, delete the app, or clear its storage. Synced app
         data remains while your account exists. In the app, open Settings and choose "Delete Account &amp;
-        Data" to delete the account and synced profile, app snapshot, legacy task and budget rows, and AI
+        Data" to delete the account and stored syllabus files, synced profile, app snapshot, legacy task and budget rows, and AI
         usage counts. The app also resets its local data and signs out.
       </p>
       <p>

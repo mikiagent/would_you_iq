@@ -36,6 +36,7 @@ const initialSnapshot: AppSnapshot = {
     urg: index === 1 ? 'high' : index === 5 ? 'med' : task.urg,
   })),
   taskWorkspace: createDefaultTaskWorkspace(),
+  syllabi: [],
   budget: {
     income: 4200,
     items: [
@@ -87,6 +88,7 @@ const signedOutSnapshot: AppSnapshot = {
   },
   tasks: [],
   taskWorkspace: createDefaultTaskWorkspace(),
+  syllabi: [],
   budget: {
     income: 0,
     items: [],

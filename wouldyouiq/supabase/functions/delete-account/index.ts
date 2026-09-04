@@ -41,6 +41,26 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  // Storage objects do not cascade with auth.users. Delete only this account's
+  // syllabus files before deleting the account so a failed cleanup is retryable.
+  try {
+    const bucket = admin.storage.from('syllabi');
+    const folders = await bucket.list(user.id, { limit: 1000 });
+    if (folders.error && !folders.error.message.toLowerCase().includes('not found')) throw folders.error;
+    for (const folder of folders.data ?? []) {
+      const prefix = `${user.id}/${folder.name}`;
+      const files = await bucket.list(prefix, { limit: 1000 });
+      if (files.error) throw files.error;
+      const paths = (files.data ?? []).map((file) => `${prefix}/${file.name}`);
+      if (paths.length) {
+        const removed = await bucket.remove(paths);
+        if (removed.error) throw removed.error;
+      }
+    }
+  } catch (error) {
+    console.error('Syllabus cleanup failed', user.id);
+    return json({ error: 'Could not remove stored syllabi. Please retry account deletion.' }, 500);
+  }
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     console.error('deleteUser failed', user.id, error.message);

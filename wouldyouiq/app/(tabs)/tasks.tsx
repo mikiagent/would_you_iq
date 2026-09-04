@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
   startTransition,
@@ -33,6 +33,8 @@ import {
 
 import { useConfettiOverlay } from '@/components/ConfettiLayer';
 import { ActionButton, Field, SegmentedControl, Sheet, ToggleRow } from '@/components/primitives';
+import { SyllabusContextPanel } from '@/components/tasks/SyllabusContextPanel';
+import { TaskEloPanel } from '@/components/tasks/TaskEloPanel';
 import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { medalForIndex } from '@/domain/logic';
@@ -89,6 +91,14 @@ const SORT_OPTIONS: Array<{ value: TaskSortMode; label: string; detail: string }
   { value: 'importance', label: 'By importance', detail: 'Highest ELO tasks first.' },
   { value: 'due', label: 'By due date', detail: 'Urgent work first, then importance.' },
   { value: 'custom', label: 'Custom order', detail: 'The order you set with the move handles.' },
+];
+
+type TaskSection = 'tasks' | 'elo' | 'context';
+
+const TASK_SECTIONS: Array<{ value: TaskSection; label: string }> = [
+  { value: 'tasks', label: 'Tasks' },
+  { value: 'elo', label: 'ELO' },
+  { value: 'context', label: 'Context' },
 ];
 
 type TaskListRow =
@@ -226,6 +236,31 @@ function ModeSwitch({ value, onChange }: { value: 'list' | 'board'; onChange: (v
             style={({ pressed }) => [styles.modeButton, active && styles.modeButtonActive, pressed && styles.pressed]}
           >
             <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{mode === 'list' ? 'List' : 'Board'}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function TaskSectionSwitch({ value, onChange }: { value: TaskSection; onChange: (value: TaskSection) => void }) {
+  return (
+    <View style={styles.sectionSwitch} accessibilityLabel="Choose task workspace section">
+      {TASK_SECTIONS.map((section) => {
+        const active = value === section.value;
+        return (
+          <Pressable
+            key={section.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(section.value)}
+            style={({ pressed }) => [
+              styles.sectionButton,
+              active && styles.sectionButtonActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.sectionLabel, active && styles.sectionLabelActive]}>{section.label}</Text>
           </Pressable>
         );
       })}
@@ -774,6 +809,7 @@ function EntityContextMenu({
 }
 
 export default function TasksScreen() {
+  const params = useLocalSearchParams<{ section?: string | string[] }>();
   const { width, height } = useWindowDimensions();
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
   const tasks = useAppStore((state) => state.tasks);
@@ -807,6 +843,10 @@ export default function TasksScreen() {
   const { confettiOverlay, triggerConfetti } = useConfettiOverlay();
 
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [taskSection, setTaskSection] = useState<TaskSection>(() => {
+    const section = Array.isArray(params.section) ? params.section[0] : params.section;
+    return section === 'elo' || section === 'context' ? section : 'tasks';
+  });
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(blankTaskDraft());
   const [projectSheetOpen, setProjectSheetOpen] = useState(false);
   const [projectDraft, setProjectDraft] = useState<TaskProjectDraft>(blankProjectDraft());
@@ -846,6 +886,12 @@ export default function TasksScreen() {
   const quickProject = projects.find((project) => project.id === quickProjectId) ?? projects[0];
 
   useEffect(() => { if (tasksView === 'insights') setTasksView('list'); }, [setTasksView, tasksView]);
+  useEffect(() => {
+    const section = Array.isArray(params.section) ? params.section[0] : params.section;
+    if (section === 'tasks' || section === 'elo' || section === 'context') {
+      setTaskSection(section);
+    }
+  }, [params.section]);
   useEffect(() => {
     if (!projects.some((project) => project.id === quickProjectId)) setQuickProjectId(projects[0]?.id ?? DEFAULT_TASK_PROJECT_ID);
   }, [projects, quickProjectId]);
@@ -1223,10 +1269,25 @@ export default function TasksScreen() {
     );
   };
 
+  if (taskSection !== 'tasks') {
+    return (
+      <View style={styles.root}>
+        <View style={[styles.content, desktop && styles.contentDesktop]}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Tasks</Text>
+          </View>
+          <TaskSectionSwitch value={taskSection} onChange={setTaskSection} />
+          {taskSection === 'elo' ? <TaskEloPanel /> : <SyllabusContextPanel />}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <View style={[styles.content, desktop && styles.contentDesktop]}>
         <View style={styles.header}><Text style={styles.headerTitle}>Tasks</Text><ModeSwitch value={activeView} onChange={setTasksView} /></View>
+        <TaskSectionSwitch value={taskSection} onChange={setTaskSection} />
 
         {activeView === 'list' ? (
           <>
@@ -1483,6 +1544,21 @@ const styles = StyleSheet.create({
   modeButtonActive: { backgroundColor: Colors.s1, borderWidth: 1, borderColor: Colors.b2 },
   modeLabel: { fontFamily: Fonts.bodyBold, fontSize: 11, color: Colors.t3 },
   modeLabelActive: { color: Colors.t1 },
+  sectionSwitch: {
+    height: 40,
+    marginHorizontal: 18,
+    marginBottom: 8,
+    padding: 3,
+    borderRadius: 14,
+    flexDirection: 'row',
+    backgroundColor: Colors.s2,
+    borderWidth: 1,
+    borderColor: Colors.b1,
+  },
+  sectionButton: { flex: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  sectionButtonActive: { backgroundColor: Colors.s1, borderWidth: 1, borderColor: Colors.b2 },
+  sectionLabel: { fontFamily: Fonts.bodyBold, fontSize: 10, color: Colors.t3 },
+  sectionLabelActive: { color: Colors.t1 },
   pressed: { opacity: 0.72 },
   listToolbar: {
     marginHorizontal: 18,

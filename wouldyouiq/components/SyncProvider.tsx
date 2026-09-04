@@ -21,6 +21,8 @@ import type { AppSnapshot } from '@/domain/models';
 import { normalizeTaskWorkspace } from '@/domain/taskWorkspace';
 import { useAppStore } from '@/domain/store';
 import { clearAiConsent } from '@/lib/aiConsent';
+import { cloudSyllabi, mergeSyllabi, recoverSyllabusScans } from '@/domain/syllabusDocuments';
+import { clearLocalSyllabusFiles } from '@/lib/syllabusStorage';
 import { isCloudConfigured, supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -38,6 +40,7 @@ function getAuthRedirectUrl() {
 type SaveState = 'saved' | 'unsaved' | 'saving' | 'error' | 'local';
 
 type SyncContextValue = {
+  userId: string | null;
   isSignedIn: boolean;
   isCloudConfigured: boolean;
   isSaving: boolean;
@@ -64,6 +67,7 @@ function getSnapshot(state: ReturnType<typeof useAppStore.getState>): AppSnapsho
     user: state.user,
     tasks: state.tasks,
     taskWorkspace: state.taskWorkspace,
+    syllabi: cloudSyllabi(state.syllabi),
     budget: state.budget,
     onboarding: state.onboarding,
     arena: state.arena,
@@ -104,6 +108,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const user = useAppStore((state) => state.user);
   const tasks = useAppStore((state) => state.tasks);
   const taskWorkspace = useAppStore((state) => state.taskWorkspace);
+  const syllabi = useAppStore((state) => state.syllabi);
   const budget = useAppStore((state) => state.budget);
   const onboarding = useAppStore((state) => state.onboarding);
   const arena = useAppStore((state) => state.arena);
@@ -113,12 +118,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       user,
       tasks,
       taskWorkspace,
+      syllabi: cloudSyllabi(syllabi),
       budget,
       onboarding,
       arena,
       runner,
     }),
-    [arena, budget, onboarding, runner, taskWorkspace, tasks, user],
+    [arena, budget, onboarding, runner, syllabi, taskWorkspace, tasks, user],
   );
   const snapshotHash = useMemo(() => JSON.stringify(snapshot), [snapshot]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -298,10 +304,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           const remoteSnapshot = {
             ...remote.snapshot,
             taskWorkspace: normalizeTaskWorkspace(remote.snapshot.taskWorkspace),
+            syllabi: recoverSyllabusScans(remote.snapshot.syllabi),
           };
           useAppStore.setState((state) => ({
             ...state,
             ...remoteSnapshot,
+            syllabi: mergeSyllabi(remoteSnapshot.syllabi, state.syllabi, identity.id!),
             user: {
               ...remoteSnapshot.user,
               name: identity.name ?? remoteSnapshot.user.name,
@@ -510,11 +518,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       throw new Error('Account deletion failed. Check your connection and try again.');
     }
 
+    if (identity.id) await clearLocalSyllabusFiles(identity.id).catch(() => undefined);
     await signOut();
-  }, [signOut]);
+  }, [identity.id, signOut]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
+      userId: identity.id,
       isSignedIn,
       isCloudConfigured,
       isSaving,
@@ -544,6 +554,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       deleteAccount,
       identity.avatarUrl,
       identity.email,
+      identity.id,
       identity.name,
       isAppleSignInAvailable,
       isCloudConfigured,

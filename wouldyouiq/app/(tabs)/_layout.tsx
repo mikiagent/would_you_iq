@@ -40,24 +40,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="elo"
-        options={{
-          tabBarLabel: 'ELO',
-          tabBarIcon: () => <TabLabel icon="🏆" />,
-        }}
-      />
-      <Tabs.Screen
         name="budget"
         options={{
           tabBarLabel: 'Budget',
           tabBarIcon: () => <TabLabel icon="💰" />,
-        }}
-      />
-      <Tabs.Screen
-        name="syllabus"
-        options={{
-          tabBarLabel: 'Syllabus',
-          tabBarIcon: () => <TabLabel icon="📚" />,
         }}
       />
       <Tabs.Screen
@@ -67,6 +53,8 @@ export default function TabsLayout() {
           tabBarIcon: () => <TabLabel icon="⚙️" />,
         }}
       />
+      <Tabs.Screen name="elo" options={{ href: null }} />
+      <Tabs.Screen name="syllabus" options={{ href: null }} />
     </Tabs>
   );
 }

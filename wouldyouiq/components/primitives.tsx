@@ -138,16 +138,18 @@ export function ActionButton({
   tone = 'secondary',
   icon,
   style,
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   tone?: 'primary' | 'secondary' | 'success';
   icon?: string;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }) {
   if (tone === 'primary') {
     return (
-      <Pressable onPress={onPress} style={style} accessibilityRole="button" accessibilityLabel={label}>
+      <Pressable disabled={disabled} onPress={onPress} style={[style, disabled && { opacity: 0.45 }]} accessibilityState={{ disabled }} accessibilityRole="button" accessibilityLabel={label}>
         <LinearGradient colors={[Colors.v2, Colors.violet]} style={[styles.button, styles.primary]}>
           {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
           <Text style={styles.primaryLabel}>{label}</Text>
@@ -158,13 +160,16 @@ export function ActionButton({
 
   return (
     <Pressable
+      disabled={disabled}
       onPress={onPress}
+      accessibilityState={{ disabled }}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={[
         styles.button,
         tone === 'success' ? styles.successButton : styles.secondaryButton,
         style,
+        disabled && { opacity: 0.45 },
       ]}
     >
       {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}

@@ -91,7 +91,6 @@ function DesktopShell({ children }: { children: ReactNode }) {
     { label: 'Tasks', icon: '📋', href: '/tasks' },
     { label: 'Would You?', icon: '⚡', href: '/calibrate' },
     { label: 'For You', icon: '✨', href: '/fyp' },
-    { label: 'ELO', icon: '🏆', href: '/elo' },
     { label: 'Budget', icon: '💰', href: '/budget' },
     { label: 'Settings', icon: '⚙️', href: '/settings' },
   ];

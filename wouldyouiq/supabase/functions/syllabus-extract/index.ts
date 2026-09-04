@@ -25,6 +25,7 @@ type ExtractRequest = {
   data?: string;
   filename?: string;
   timezone?: string;
+  mimeType?: string;
 };
 
 type RawAssignment = {
@@ -162,7 +163,8 @@ Deno.serve(async (req) => {
   if (kind === 'text') {
     content.push({ type: 'text', text: `Syllabus text:\n${data.trim()}` });
   } else if (kind === 'image') {
-    content.push({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${data}` } });
+    const mimeType = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(body.mimeType ?? '') ? body.mimeType : 'image/jpeg';
+    content.push({ type: 'image_url', image_url: { url: `data:${mimeType};base64,${data}` } });
   } else {
     content.push({
       type: 'file',
