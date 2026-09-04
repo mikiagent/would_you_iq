@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Device-level consent record for sending syllabus content to the AI
-// provider (App Review Guideline 5.1.2(i)). Deliberately kept out of the
-// synced snapshot: consent is per-device and must survive account changes.
+// Device-local consent record for sending syllabus content to the AI
+// provider (App Review Guideline 5.1.2(i)). It is kept out of cloud sync and
+// cleared at sign-out so another account on the device must consent itself.
 const AI_CONSENT_KEY = 'wouldyouiq-ai-consent-v1';
 
-export const AI_CONSENT_VERSION = 1;
+export const AI_CONSENT_VERSION = 2;
 
 export type AiConsentRecord = {
   version: number;

@@ -4,6 +4,7 @@ import test from 'node:test';
 import { mockRepository } from '../data/mockRepository.ts';
 import {
   alignmentScore,
+  applyArenaResult,
   budgetTotals,
   buildOnboardingSeedTasks,
   buildTournamentPairs,
@@ -13,6 +14,25 @@ import {
 } from '../domain/logic.ts';
 import { OB_TASKS } from '../constants/onboarding.ts';
 import { assignmentToTaskDraft, deriveDeadline } from '../lib/syllabusMapping.ts';
+import {
+  DEFAULT_TASK_PROJECT_ID,
+  getProjectStats,
+  normalizeTaskWorkspace,
+  syncCompletedProjectColumns,
+} from '../domain/taskWorkspace.ts';
+import { pickTaskDropTarget } from '../domain/taskDrag.ts';
+
+test('a clean start has no demo tasks, budget, or progress', () => {
+  const snapshot = mockRepository.loadSignedOutSnapshot();
+
+  assert.equal(snapshot.tasks.length, 0);
+  assert.equal(snapshot.budget.income, 0);
+  assert.equal(snapshot.budget.items.length, 0);
+  assert.equal(snapshot.user.xp, 0);
+  assert.equal(snapshot.user.streak, 0);
+  assert.equal(snapshot.user.comparisons, 0);
+  assert.equal(snapshot.user.done, 0);
+});
 
 test('budget totals compute leftover and spent percent', () => {
   const snapshot = mockRepository.loadSnapshot();
@@ -103,4 +123,90 @@ test('assignments convert to task drafts with due date in detail', () => {
   assert.equal(undated.e, '📚');
   assert.equal(undated.t, '30 min');
   assert.equal(undated.detail, undefined);
+});
+
+test('legacy tasks fall back to the Personal project without rewriting them', () => {
+  const snapshot = mockRepository.loadSnapshot();
+  const workspace = normalizeTaskWorkspace(undefined);
+  const stats = getProjectStats(DEFAULT_TASK_PROJECT_ID, snapshot.tasks, workspace);
+
+  assert.equal(workspace.projects[0]?.id, DEFAULT_TASK_PROJECT_ID);
+  assert.equal(stats.taskCount, snapshot.tasks.length);
+  assert.ok(stats.total >= stats.taskCount);
+});
+
+test('a completed project moves to the final board column', () => {
+  const snapshot = mockRepository.loadSnapshot();
+  const tasks = snapshot.tasks.map((task) => ({
+    ...task,
+    done: true,
+    subtasks: task.subtasks.map((subtask) => ({ ...subtask, done: true })),
+  }));
+  const workspace = syncCompletedProjectColumns(snapshot.taskWorkspace, tasks);
+  const finalColumn = workspace.columns[workspace.columns.length - 1];
+
+  assert.equal(workspace.projects[0]?.columnId, finalColumn?.id);
+});
+
+test('project comparisons update project ELO without changing task ELO', () => {
+  const snapshot = mockRepository.loadSnapshot();
+  const personal = snapshot.taskWorkspace.projects[0]!;
+  const secondProject = {
+    ...personal,
+    id: 'project-work',
+    code: 'WORK',
+    name: 'Work',
+    order: 1,
+  };
+  const taskWorkspace = {
+    ...snapshot.taskWorkspace,
+    projects: [personal, secondProject],
+  };
+  const originalTaskElos = snapshot.tasks.map((task) => task.elo);
+
+  const result = applyArenaResult(
+    'projects',
+    snapshot.tasks,
+    snapshot.budget,
+    taskWorkspace,
+    personal.id,
+    secondProject.id,
+    'challenger',
+  );
+
+  assert.equal(result.taskWorkspace.projects.find((project) => project.id === secondProject.id)?.elo, 1216);
+  assert.equal(result.taskWorkspace.projects.find((project) => project.id === personal.id)?.elo, 1184);
+  assert.deepEqual(result.tasks.map((task) => task.elo), originalTaskElos);
+});
+
+test('task drag targeting prefers a task row over its containing project', () => {
+  const target = pickTaskDropTarget(
+    { kind: 'task', taskId: 'task-a', projectId: 'project-a' },
+    [
+      {
+        key: 'project:project-b',
+        target: { kind: 'project', projectId: 'project-b' },
+        x: 0,
+        y: 100,
+        width: 320,
+        height: 200,
+      },
+      {
+        key: 'task:task-b',
+        target: { kind: 'task', taskId: 'task-b', projectId: 'project-b' },
+        x: 16,
+        y: 140,
+        width: 288,
+        height: 68,
+      },
+    ],
+    { x: 160, y: 175 },
+  );
+
+  assert.deepEqual(target, {
+    kind: 'task',
+    taskId: 'task-b',
+    projectId: 'project-b',
+    before: false,
+  });
 });

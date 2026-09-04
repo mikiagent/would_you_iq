@@ -15,6 +15,7 @@ import { isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
 import { truncateTaskName } from '@/domain/logic';
 import { useAppStore } from '@/domain/store';
+import { getTaskLeafSubtasks } from '@/domain/taskWorkspace';
 
 export default function RunnerScreen() {
   const { width } = useWindowDimensions();
@@ -45,7 +46,7 @@ export default function RunnerScreen() {
 
   const task = tasks.find((entry) => entry.id === (routeTaskId ?? runner.taskId));
   const orderedSubtasks = useMemo(
-    () => (task ? [...task.subtasks].sort((left, right) => left.order - right.order) : []),
+    () => (task ? getTaskLeafSubtasks(task) : []),
     [task],
   );
   const subtask = orderedSubtasks[runner.stepIndex] ?? null;

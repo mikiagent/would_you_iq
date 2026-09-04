@@ -40,6 +40,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="elo"
+        options={{
+          tabBarLabel: 'ELO',
+          tabBarIcon: () => <TabLabel icon="🏆" />,
+        }}
+      />
+      <Tabs.Screen
         name="budget"
         options={{
           tabBarLabel: 'Budget',

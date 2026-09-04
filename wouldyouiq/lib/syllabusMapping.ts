@@ -39,5 +39,6 @@ export function assignmentToTaskDraft(assignment: ExtractedAssignment, now: Date
     dl: deadline,
     ess: deadline !== null,
     detail,
+    dueLabel: dueLabel || undefined,
   };
 }

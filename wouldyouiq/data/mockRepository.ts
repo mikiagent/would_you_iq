@@ -1,5 +1,6 @@
 import { OB_TASKS } from '../constants/onboarding.ts';
 import { buildOnboardingSeedTasks, buildTournamentPairs, cloneSnapshot, createId } from '../domain/logic.ts';
+import { createDefaultTaskWorkspace } from '../domain/taskWorkspace.ts';
 import type { AppSnapshot, Budget } from '../domain/models.ts';
 
 const seedTasks = buildOnboardingSeedTasks(OB_TASKS.slice(0, 8));
@@ -34,6 +35,7 @@ const initialSnapshot: AppSnapshot = {
     dl: index === 1 ? 'today' : index === 5 ? 'today' : task.dl,
     urg: index === 1 ? 'high' : index === 5 ? 'med' : task.urg,
   })),
+  taskWorkspace: createDefaultTaskWorkspace(),
   budget: {
     income: 4200,
     items: [
@@ -84,6 +86,7 @@ const signedOutSnapshot: AppSnapshot = {
     lastCalibrationDate: null,
   },
   tasks: [],
+  taskWorkspace: createDefaultTaskWorkspace(),
   budget: {
     income: 0,
     items: [],

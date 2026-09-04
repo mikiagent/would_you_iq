@@ -1,8 +1,6 @@
-// Public URLs surfaced inside the app (App Review Guideline 5.1.1(i)
-// requires an easy-to-find privacy policy link in-app).
-// TODO: replace with the final published GitHub Pages URLs before the
-// production build — App Review will follow these links.
+// Public URLs surfaced inside the app. The matching static pages live in the
+// repository's /docs directory and are intended for GitHub Pages.
 export const Links = {
-  privacyPolicy: 'https://milankinzy.github.io/wouldyouiq-legal/privacy.html',
-  support: 'https://milankinzy.github.io/wouldyouiq-legal/support.html',
+  privacyPolicy: 'https://mikiagent.github.io/would_you_iq/privacy/',
+  support: 'https://mikiagent.github.io/would_you_iq/support/',
 };

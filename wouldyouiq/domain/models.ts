@@ -6,11 +6,13 @@ export type BudgetType = 'ess' | 'flex';
 
 export type TaskFilter = 'all' | 'ess' | 'due' | 'done';
 
-export type TasksView = 'list' | 'insights';
+export type TasksView = 'list' | 'board' | 'insights';
+
+export type TaskSortMode = 'importance' | 'due' | 'custom';
 
 export type BudgetView = 'overview' | 'insights';
 
-export type ArenaMode = 'tasks' | 'budget';
+export type ArenaMode = 'projects' | 'tasks' | 'budget';
 
 export type ArenaSwipe = 'champion' | 'challenger' | 'skip' | 'essential';
 
@@ -28,6 +30,7 @@ export interface Subtask {
   done: boolean;
   why?: string;
   order: number;
+  parentId?: string | null;
 }
 
 export interface Task {
@@ -42,8 +45,47 @@ export interface Task {
   done: boolean;
   subtasks: Subtask[];
   detail?: string;
+  dueLabel?: string;
+  projectId?: string;
   createdAt: number;
   order: number;
+}
+
+export interface TaskProject {
+  id: string;
+  code: string;
+  name: string;
+  color: string;
+  elo: number;
+  columnId: string;
+  order: number;
+  createdAt: number;
+}
+
+export interface TaskBoardColumn {
+  id: string;
+  name: string;
+  order: number;
+}
+
+export interface TaskWorkspacePreferences {
+  sort: TaskSortMode;
+  completedAtBottom: boolean;
+  autoMoveCompletedProjects: boolean;
+}
+
+export interface TaskWorkspace {
+  projects: TaskProject[];
+  columns: TaskBoardColumn[];
+  preferences: TaskWorkspacePreferences;
+}
+
+export interface TaskProjectDraft {
+  id?: string;
+  code: string;
+  name: string;
+  color: string;
+  columnId?: string;
 }
 
 export interface BudgetItem {
@@ -162,6 +204,8 @@ export interface TaskDraft {
   dl: Deadline;
   ess: boolean;
   detail?: string;
+  dueLabel?: string;
+  projectId?: string;
 }
 
 export interface SubtaskDraft {
@@ -174,6 +218,7 @@ export interface SubtaskDraft {
 export interface AppSnapshot {
   user: User;
   tasks: Task[];
+  taskWorkspace: TaskWorkspace;
   budget: Budget;
   onboarding: OnboardingState;
   arena: ArenaState;

@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -294,7 +294,7 @@ export default function OnboardingScreen() {
   );
 
   if (onboarding.completed) {
-    return <Redirect href="/(tabs)/calibrate" />;
+    return <Redirect href="/(tabs)/tasks" />;
   }
 
   return (
@@ -345,7 +345,7 @@ export default function OnboardingScreen() {
                 <View style={styles.statRow}>
                   <StatChip value="2s" label="per choice" />
                   <StatChip value="ELO" label="live ranked" />
-                  <StatChip value="revealed" label="by choice" />
+                  <StatChip value="Clear" label="next move" />
                 </View>
               </View>
             ) : null}
@@ -589,7 +589,6 @@ export default function OnboardingScreen() {
                 onPress={() => {
                   finishOnboarding({ useSampleTasks: false });
                   startGuidedTour();
-                  router.replace('/(tabs)/tasks');
                 }}
                 style={styles.halfButton}
               />
@@ -599,7 +598,6 @@ export default function OnboardingScreen() {
                 onPress={() => {
                   finishOnboarding({ useSampleTasks: true });
                   startGuidedTour();
-                  router.replace('/(tabs)/tasks');
                 }}
                 style={styles.halfButton}
               />

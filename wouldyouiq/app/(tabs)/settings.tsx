@@ -48,6 +48,7 @@ export default function SettingsScreen() {
     displayName,
     email,
     isSignedIn,
+    isCloudConfigured,
     isAppleSignInAvailable,
     signInWithGoogle,
     signInWithApple,
@@ -65,24 +66,29 @@ export default function SettingsScreen() {
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   useEffect(() => {
+    if (!isSignedIn) {
+      setHasAiConsent(false);
+      return;
+    }
+
     getAiConsent().then((record) => setHasAiConsent(!!record));
-  }, []);
+  }, [isSignedIn]);
 
   const handleDeleteAccount = () => {
     confirmDestructive(
       'Delete account?',
-      'This permanently deletes your account and all cloud data (profile, tasks, budget, and sync history). Data saved on this device is also reset. This cannot be undone.',
+      'This permanently deletes your account and synced app content, including your profile, tasks, and budget. Data saved on this device is also reset. Service providers may retain limited security logs under their standard retention policies. This cannot be undone.',
       'Delete',
       () => {
         confirmDestructive(
           'Are you sure?',
-          'Your account and cloud data will be permanently deleted.',
+          'Your account and synced app content will be permanently deleted. If you used Sign in with Apple, also remove WouldYouIQ from your Sign in with Apple settings to revoke the remaining Apple authorization.',
           'Delete forever',
           () => {
             setIsDeletingAccount(true);
             deleteAccount()
               .then(() => {
-                showToast({ icon: '🗑️', title: 'Account deleted', subtitle: 'Your account and cloud data were removed.' });
+                showToast({ icon: '🗑️', title: 'Account deleted', subtitle: 'Your account and synced app content were removed.' });
               })
               .catch((err: Error) => {
                 showToast({ icon: '⚠️', title: 'Deletion failed', subtitle: err.message || 'Try again.' });
@@ -120,7 +126,11 @@ export default function SettingsScreen() {
                 setSheetOpen(true);
               }}
             />
-            {isSignedIn ? (
+            {!isCloudConfigured ? (
+              <Text style={styles.sectionNote}>
+                Cloud sync is unavailable in this build. Local features still work.
+              </Text>
+            ) : isSignedIn ? (
               <ActionButton
                 label="Sign Out"
                 onPress={() => {
@@ -194,7 +204,10 @@ export default function SettingsScreen() {
               'Reset app data?',
               'This clears all tasks, budget items, and progress stored on this device. This cannot be undone.',
               'Reset',
-              resetApp,
+              () => {
+                resetApp();
+                router.replace('/onboarding');
+              },
             );
           }}
         />
@@ -210,7 +223,7 @@ export default function SettingsScreen() {
           <Surface style={styles.dangerCard}>
             <Text style={styles.dangerTitle}>Danger zone</Text>
             <Text style={styles.sectionNote}>
-              Permanently delete your account and all cloud data.
+              Permanently delete your account and synced app content.
             </Text>
             <ActionButton
               label={isDeletingAccount ? 'Deleting…' : 'Delete Account & Data'}

@@ -12,8 +12,10 @@ import type {
   Task,
   TaskFilter,
   TaskInsight,
+  TaskWorkspace,
   User,
 } from './models.ts';
+import { DEFAULT_TASK_PROJECT_ID } from './taskWorkspace.ts';
 
 export const COMPARISON_XP = 20;
 export const ESSENTIAL_XP = 30;
@@ -98,6 +100,7 @@ export function buildOnboardingSeedTasks(options: OnboardingOption[]) {
       urg: index === 1 ? 'high' : index === 2 ? 'med' : 'low',
       done: false,
       detail: buildTaskDetail(option.n),
+      projectId: DEFAULT_TASK_PROJECT_ID,
       createdAt: Date.now() + index,
       order: index,
       subtasks,
@@ -184,7 +187,16 @@ export function getForYouQueue(tasks: Task[]) {
   });
 }
 
-export function getArenaItems(mode: ArenaMode, tasks: Task[], budget: Budget) {
+export function getArenaItems(
+  mode: ArenaMode,
+  tasks: Task[],
+  budget: Budget,
+  taskWorkspace: TaskWorkspace,
+) {
+  if (mode === 'projects') {
+    return taskWorkspace.projects;
+  }
+
   if (mode === 'tasks') {
     return tasks.filter((task) => !task.done && !task.ess);
   }
@@ -196,11 +208,12 @@ export function ensureArenaPair(
   mode: ArenaMode,
   tasks: Task[],
   budget: Budget,
+  taskWorkspace: TaskWorkspace,
   championId: string | null,
   challengerId: string | null,
   rotationIndex: number,
 ) {
-  const items = getArenaItems(mode, tasks, budget);
+  const items = getArenaItems(mode, tasks, budget, taskWorkspace);
 
   if (items.length < 2) {
     return {
@@ -234,10 +247,11 @@ export function nextArenaRotation(
   mode: ArenaMode,
   tasks: Task[],
   budget: Budget,
+  taskWorkspace: TaskWorkspace,
   championId: string | null,
   currentRotation: number,
 ) {
-  const items = getArenaItems(mode, tasks, budget).filter((item) => item.id !== championId);
+  const items = getArenaItems(mode, tasks, budget, taskWorkspace).filter((item) => item.id !== championId);
 
   if (!items.length) return 0;
   return (currentRotation + 1) % items.length;
@@ -247,10 +261,32 @@ export function applyArenaResult(
   mode: ArenaMode,
   tasks: Task[],
   budget: Budget,
+  taskWorkspace: TaskWorkspace,
   championId: string,
   challengerId: string,
   swipe: Extract<ArenaSwipe, 'champion' | 'challenger'>,
 ) {
+  if (mode === 'projects') {
+    const winnerId = swipe === 'champion' ? championId : challengerId;
+    return {
+      tasks,
+      budget,
+      taskWorkspace: {
+        ...taskWorkspace,
+        projects: taskWorkspace.projects.map((project) => {
+          if (project.id === winnerId) return { ...project, elo: project.elo + 16 };
+          if (project.id === championId || project.id === challengerId) {
+            return { ...project, elo: project.elo - 16 };
+          }
+          return project;
+        }),
+      },
+      championId: winnerId,
+      xpDelta: COMPARISON_XP,
+      comparisonsDelta: 1,
+    };
+  }
+
   if (mode === 'tasks') {
     const winnerId = swipe === 'champion' ? championId : challengerId;
     const nextTasks = tasks.map((task) => {
@@ -264,6 +300,7 @@ export function applyArenaResult(
     return {
       tasks: nextTasks,
       budget,
+      taskWorkspace,
       championId: winnerId,
       xpDelta: COMPARISON_XP,
       comparisonsDelta: 1,
@@ -289,6 +326,7 @@ export function applyArenaResult(
   return {
     tasks,
     budget: { ...budget, items: nextItems },
+    taskWorkspace,
     championId: swipe === 'champion' ? championId : challengerId,
     xpDelta: COMPARISON_XP,
     comparisonsDelta: 1,

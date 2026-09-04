@@ -12,7 +12,6 @@ import {
 import { usePathname, useRouter } from 'expo-router';
 
 import { AmbientBackground } from '@/components/AmbientBackground';
-import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
 import { GuidedTour } from '@/components/GuidedTour';
 import { ProfileAvatar } from '@/components/ProfileAvatar';
 import { SyncProvider, useCloudSync } from '@/components/SyncProvider';
@@ -70,7 +69,6 @@ function DesktopShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const startGuidedTour = useAppStore((state) => state.startGuidedTour);
   const replayOnboarding = useAppStore((state) => state.replayOnboarding);
-  const tasks = useAppStore((state) => state.tasks);
   const user = useAppStore((state) => state.user);
   const { avatarUrl, displayName, email, isSignedIn } = useCloudSync();
   const storedUser = user;
@@ -93,6 +91,7 @@ function DesktopShell({ children }: { children: ReactNode }) {
     { label: 'Tasks', icon: '📋', href: '/tasks' },
     { label: 'Would You?', icon: '⚡', href: '/calibrate' },
     { label: 'For You', icon: '✨', href: '/fyp' },
+    { label: 'ELO', icon: '🏆', href: '/elo' },
     { label: 'Budget', icon: '💰', href: '/budget' },
     { label: 'Settings', icon: '⚙️', href: '/settings' },
   ];
@@ -201,7 +200,6 @@ function DesktopShell({ children }: { children: ReactNode }) {
           </View>
         </View>
         <View style={styles.desktopFloatingRail}>
-          <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
           {showTabsChrome ? (
             <View style={styles.desktopLevelCard}>
               <View style={styles.desktopLevelRow}>

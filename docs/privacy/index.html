@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="WouldYouIQ privacy policy." />
+    <title>Privacy policy | WouldYouIQ</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Legal and support">
+        <a href="../">WouldYouIQ</a>
+        <a href="./" aria-current="page">Privacy</a>
+        <a href="../privacy-choices/">Privacy choices</a>
+        <a href="../support/">Support</a>
+      </nav>
+      <h1>Privacy policy</h1>
+      <p class="meta">Effective September 3, 2026</p>
+      <p class="lede">
+        WouldYouIQ works without an account. Tasks, budget entries, ranking choices, and progress stay
+        on your device unless you choose cloud sync or use AI syllabus import.
+      </p>
+
+      <h2>Who operates the app</h2>
+      <p>
+        WouldYouIQ is operated by Milan Kinzy. For privacy questions, email
+        <a href="mailto:milan.kinzy@gmail.com">milan.kinzy@gmail.com</a>.
+      </p>
+
+      <h2>Data kept on your device</h2>
+      <p>
+        The app stores your name, tasks, task details, ranking choices, budget amounts, progress,
+        onboarding state, and AI-consent choice on your device. This information is not sent to us when
+        you use the app without signing in or starting an AI import.
+      </p>
+
+      <h2>Optional account and cloud sync</h2>
+      <p>
+        If you sign in with Apple or Google, Supabase provides authentication and cloud storage. We store
+        your account identifier, name, email address or Apple private relay address, optional profile
+        image URL, and a synced copy of your app data. Synced app data includes tasks, free-form task
+        details, ranking and progress state, monthly income, and budget entries. We use it only to sign
+        you in, restore your data, and sync the app across your devices. We do not sell it or use it for
+        advertising or tracking.
+      </p>
+      <p>
+        Supabase records authentication and service logs for security and reliability. These logs may
+        include an account identifier, IP address, user agent, event type, and time. Supabase retains logs
+        according to its service plan and policies.
+      </p>
+
+      <h2>Optional AI syllabus import</h2>
+      <p>
+        Syllabus import requires an account and a separate consent step. If you agree and start an import,
+        the PDF, photo, or text you selected is sent through a Supabase Edge Function to OpenRouter and a
+        routed Anthropic model endpoint. The content is used only to extract assignments for your review.
+      </p>
+      <p>
+        Each request requires OpenRouter to use a zero-data-retention endpoint. OpenRouter and the routed
+        model provider process the selected content only to answer the request and do not use that content
+        for model training. OpenRouter retains request metadata such as model, token counts, latency, and
+        cost, but not the syllabus content. WouldYouIQ stores a linked daily usage count in Supabase to
+        enforce the import limit. The count is deleted with your account.
+      </p>
+      <p>
+        AI output can be wrong. You review and edit extracted assignments before saving them. You can
+        decline AI consent and continue using every non-AI part of the app.
+      </p>
+
+      <h2>Photos and files</h2>
+      <p>
+        The app opens Apple's system pickers when you choose a syllabus PDF or photo. It receives only the
+        item you select. It does not scan your photo library or upload other files. A selected item is sent
+        off the device only after you start AI import and grant consent.
+      </p>
+
+      <h2>Service providers</h2>
+      <ul>
+        <li>
+          <a href="https://supabase.com/privacy" rel="noreferrer">Supabase</a> provides authentication,
+          cloud sync, database hosting, and server functions.
+        </li>
+        <li>
+          <a href="https://openrouter.ai/privacy" rel="noreferrer">OpenRouter</a> routes the optional AI
+          request and stores non-content request metadata.
+        </li>
+        <li>Anthropic supplies the model used for optional syllabus extraction through OpenRouter.</li>
+        <li>Apple or Google processes sign-in information when you choose that provider.</li>
+      </ul>
+
+      <h2>Retention and deletion</h2>
+      <p>
+        Local app data remains until you reset the app, delete the app, or clear its storage. Synced app
+        data remains while your account exists. In the app, open Settings and choose "Delete Account &amp;
+        Data" to delete the account and synced profile, app snapshot, legacy task and budget rows, and AI
+        usage counts. The app also resets its local data and signs out.
+      </p>
+      <p>
+        Service providers may retain limited security, fraud-prevention, billing, and operational records
+        under their policies after account deletion. If you used Sign in with Apple, remove WouldYouIQ
+        from your Sign in with Apple settings after deletion to revoke the remaining Apple authorization.
+      </p>
+
+      <h2>Your choices</h2>
+      <p>
+        You can use the core app without an account, sign out to stop sync, revoke AI consent in Settings,
+        reset local app data, or delete your account in the app. See the
+        <a href="../privacy-choices/">privacy choices page</a> for exact steps.
+      </p>
+
+      <h2>Security</h2>
+      <p>
+        Network requests use HTTPS. Native authentication sessions are encrypted before storage, with the
+        encryption key held in the iOS secure credential store. Supabase Row Level Security restricts
+        signed-in users to their own app records. No method of storage or transmission is risk-free.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        WouldYouIQ is a general productivity app and is not directed to children under 13. Do not submit
+        another person's personal information through syllabus import without permission.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        Material changes will be posted here with a new effective date. If a change affects AI consent,
+        the app will ask for consent again before sending content.
+      </p>
+
+      <footer>
+        <p class="meta">WouldYouIQ is operated by Milan Kinzy.</p>
+      </footer>
+    </main>
+  </body>
+</html>

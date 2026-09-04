@@ -7,12 +7,16 @@ import aesjs from 'aes-js';
 import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const configuredSupabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const configuredSupabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables.');
-}
+export const isCloudConfigured = Boolean(configuredSupabaseUrl && configuredSupabaseAnonKey);
+
+// Keep local-only functionality available if a build is misconfigured. Cloud
+// actions are hidden in this state, so this client never sends requests to the
+// reserved fallback host.
+const supabaseUrl = configuredSupabaseUrl ?? 'https://wouldyouiq.invalid';
+const supabaseAnonKey = configuredSupabaseAnonKey ?? 'cloud-not-configured';
 
 const noopStorage = {
   getItem: async () => null,

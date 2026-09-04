@@ -45,8 +45,8 @@ const TOUR_STEPS = [
     badge: 'Settings',
     title: 'Settings is where sync, profile, and resets live.',
     body:
-      'You can connect Google and Supabase, edit your profile, check stats, or replay this tour anytime if you want a refresher.',
-    hint: 'Use Reset Demo Data if you want to start the sample workspace over.',
+      'You can sign in with Apple or Google for cloud sync, edit your profile, manage privacy choices, or replay this tour anytime.',
+    hint: 'Use Reset App Data if you want to clear the workspace and start over.',
   },
 ] as const;
 

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { DonutChart } from '@/components/DonutChart';
-import { DesktopTaskRankingRail } from '@/components/DesktopTaskRankingRail';
 import { ActionButton, Badge, Fab, Field, PageHeader, SegmentedControl, Sheet, Surface, ToggleRow } from '@/components/primitives';
 import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
@@ -31,7 +30,6 @@ function blankExpense(): ExpenseDraft {
 export default function BudgetScreen() {
   const { width } = useWindowDimensions();
   const budget = useAppStore((state) => state.budget);
-  const tasks = useAppStore((state) => state.tasks);
   const budgetView = useAppStore((state) => state.budgetView);
   const setBudgetView = useAppStore((state) => state.setBudgetView);
   const saveExpense = useAppStore((state) => state.saveExpense);
@@ -268,11 +266,6 @@ export default function BudgetScreen() {
             </Surface>
           )}
           </View>
-          {!desktop ? (
-            <View style={styles.mobileRail}>
-              <DesktopTaskRankingRail tasks={tasks} title="Task ELO board" />
-            </View>
-          ) : null}
           </View>
         ) : null}
       </View>
@@ -667,11 +660,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     maxWidth: 470,
-  },
-  mobileRail: {
-    width: '100%',
-    marginTop: 20,
-    alignItems: 'center',
   },
   insightEmoji: {
     fontSize: 58,

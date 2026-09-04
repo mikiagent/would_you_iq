@@ -18,9 +18,10 @@ import React, {
 import { cloudRepository } from '@/data/cloudRepository';
 import { mockRepository } from '@/data/mockRepository';
 import type { AppSnapshot } from '@/domain/models';
+import { normalizeTaskWorkspace } from '@/domain/taskWorkspace';
 import { useAppStore } from '@/domain/store';
 import { clearAiConsent } from '@/lib/aiConsent';
-import { supabase } from '@/lib/supabase';
+import { isCloudConfigured, supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +39,7 @@ type SaveState = 'saved' | 'unsaved' | 'saving' | 'error' | 'local';
 
 type SyncContextValue = {
   isSignedIn: boolean;
+  isCloudConfigured: boolean;
   isSaving: boolean;
   isDirty: boolean;
   saveState: SaveState;
@@ -61,6 +63,7 @@ function getSnapshot(state: ReturnType<typeof useAppStore.getState>): AppSnapsho
   return {
     user: state.user,
     tasks: state.tasks,
+    taskWorkspace: state.taskWorkspace,
     budget: state.budget,
     onboarding: state.onboarding,
     arena: state.arena,
@@ -100,6 +103,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   const user = useAppStore((state) => state.user);
   const tasks = useAppStore((state) => state.tasks);
+  const taskWorkspace = useAppStore((state) => state.taskWorkspace);
   const budget = useAppStore((state) => state.budget);
   const onboarding = useAppStore((state) => state.onboarding);
   const arena = useAppStore((state) => state.arena);
@@ -108,12 +112,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       tasks,
+      taskWorkspace,
       budget,
       onboarding,
       arena,
       runner,
     }),
-    [arena, budget, onboarding, runner, tasks, user],
+    [arena, budget, onboarding, runner, taskWorkspace, tasks, user],
   );
   const snapshotHash = useMemo(() => JSON.stringify(snapshot), [snapshot]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,6 +222,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hasHydrated) return;
+    if (!isCloudConfigured) {
+      setSessionUser(null);
+      return;
+    }
 
     supabase.auth.getSession().then(({ data }) => {
       setSessionUser(data.session?.user ?? null);
@@ -286,17 +295,21 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
         const localIsDirty = !!lastSavedHash && snapshotHash !== lastSavedHash;
         if (remote?.snapshot && !localIsDirty) {
+          const remoteSnapshot = {
+            ...remote.snapshot,
+            taskWorkspace: normalizeTaskWorkspace(remote.snapshot.taskWorkspace),
+          };
           useAppStore.setState((state) => ({
             ...state,
-            ...remote.snapshot,
+            ...remoteSnapshot,
             user: {
-              ...remote.snapshot.user,
-              name: identity.name ?? remote.snapshot.user.name,
+              ...remoteSnapshot.user,
+              name: identity.name ?? remoteSnapshot.user.name,
               email: identity.email,
               avatarUrl: identity.avatarUrl,
             },
           }));
-          const remoteHash = JSON.stringify(remote.snapshot);
+          const remoteHash = JSON.stringify(remoteSnapshot);
           setLastSavedHash(remoteHash);
           await persistMeta(remoteHash);
           setSaveState('saved');
@@ -368,6 +381,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [isDirty, isSaving, isSignedIn, manualSave]);
 
   const signInWithGoogle = useCallback(async () => {
+    if (!isCloudConfigured) {
+      throw new Error('Cloud sync is not configured in this build.');
+    }
+
     const redirectTo = getAuthRedirectUrl();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -399,6 +416,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithApple = useCallback(async () => {
+    if (!isCloudConfigured) {
+      throw new Error('Cloud sync is not configured in this build.');
+    }
+
     if (Platform.OS !== 'ios') {
       throw new Error('Sign in with Apple is only available on iOS.');
     }
@@ -449,7 +470,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (isCloudConfigured) {
+      await supabase.auth.signOut();
+    }
+    // Consent to send syllabus content to a third-party AI provider belongs
+    // to the person who granted it. Never carry it into another account on a
+    // shared device.
+    await clearAiConsent();
     await AsyncStorage.removeItem(SYNC_META_KEY);
     await useAppStore.persist.clearStorage();
 
@@ -467,6 +494,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       budgetView: 'overview',
       taskFilter: 'all',
       expandedTaskIds: [],
+      collapsedTaskProjectIds: [],
     });
 
     setSessionUser(null);
@@ -482,13 +510,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       throw new Error('Account deletion failed. Check your connection and try again.');
     }
 
-    await clearAiConsent();
     await signOut();
   }, [signOut]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
       isSignedIn,
+      isCloudConfigured,
       isSaving,
       isDirty,
       saveState,
@@ -518,6 +546,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       identity.email,
       identity.name,
       isAppleSignInAvailable,
+      isCloudConfigured,
       isDirty,
       isSaving,
       isSignedIn,

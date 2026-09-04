@@ -55,7 +55,13 @@ export default function SyllabusScreen() {
   const { width } = useWindowDimensions();
   const saveTask = useAppStore((state) => state.saveTask);
   const showToast = useAppStore((state) => state.showToast);
-  const { isSignedIn, isAppleSignInAvailable, signInWithApple, signInWithGoogle } = useCloudSync();
+  const {
+    isSignedIn,
+    isCloudConfigured,
+    isAppleSignInAvailable,
+    signInWithApple,
+    signInWithGoogle,
+  } = useCloudSync();
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   const [pastedText, setPastedText] = useState('');
@@ -68,8 +74,13 @@ export default function SyllabusScreen() {
   const [pendingAfterConsent, setPendingAfterConsent] = useState<PendingSource | null>(null);
 
   useEffect(() => {
+    if (!isSignedIn) {
+      setHasConsent(false);
+      return;
+    }
+
     getAiConsent().then((record) => setHasConsent(!!record));
-  }, []);
+  }, [isSignedIn]);
 
   const pickPdf = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -196,7 +207,15 @@ export default function SyllabusScreen() {
             </Text>
           </Surface>
 
-          {!isSignedIn ? (
+          {!isCloudConfigured ? (
+            <Surface style={styles.panel}>
+              <Text style={styles.panelTitle}>Syllabus import is unavailable</Text>
+              <Text style={styles.helperText}>
+                This build is missing its cloud configuration. You can keep adding and ranking tasks
+                manually.
+              </Text>
+            </Surface>
+          ) : !isSignedIn ? (
             <Surface style={styles.panel}>
               <Text style={styles.panelTitle}>Sign in to import a syllabus</Text>
               <Text style={styles.helperText}>
@@ -408,7 +427,7 @@ export default function SyllabusScreen() {
         <Text style={styles.consentBody}>
           To extract assignments, the file, photo, or text you chose is sent over an encrypted
           connection to OpenRouter and processed by an Anthropic AI model. It is used only to generate
-          your assignment list, with zero data retention requested from the provider — it is not used
+          your assignment list. The request requires a zero-data-retention provider and is not used
           to train models.
         </Text>
         <Text style={styles.consentBody}>
@@ -425,7 +444,7 @@ export default function SyllabusScreen() {
           <Text style={styles.consentLink}>Read the privacy policy</Text>
         </Pressable>
         <ActionButton
-          label="I Agree — Send My Syllabus"
+          label="I Agree and Send My Syllabus"
           tone="primary"
           onPress={() => {
             const source = pendingAfterConsent;

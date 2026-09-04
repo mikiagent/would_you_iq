@@ -35,15 +35,27 @@ import type {
   TaskDraft,
   TaskFilter,
   TaskInsight,
+  TaskProjectDraft,
+  TaskSortMode,
   SubtaskDraft,
   TasksView,
   ToastState,
 } from './models';
+import {
+  DEFAULT_TASK_PROJECT_ID,
+  getTaskItemStats,
+  getTaskLeafSubtasks,
+  normalizeTaskWorkspace,
+  syncCompletedProjectColumns,
+} from './taskWorkspace';
 
 type RunnerAction = 'done' | 'skip';
 const COMPLETION_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
-type PersistedState = Pick<AppStore, 'user' | 'tasks' | 'budget' | 'onboarding' | 'arena' | 'runner' | 'guidedTour'>;
+type PersistedState = Pick<
+  AppStore,
+  'user' | 'tasks' | 'taskWorkspace' | 'budget' | 'onboarding' | 'arena' | 'runner' | 'guidedTour'
+>;
 
 const initialGuidedTourState: GuidedTourState = {
   active: false,
@@ -59,13 +71,26 @@ export interface AppStore extends AppSnapshot {
   budgetView: BudgetView;
   taskFilter: TaskFilter;
   expandedTaskIds: string[];
+  collapsedTaskProjectIds: string[];
   setHasHydrated: (value: boolean) => void;
   showToast: (toast: Omit<ToastState, 'id'>) => void;
   clearToast: () => void;
   setTasksView: (view: TasksView) => void;
   setBudgetView: (view: BudgetView) => void;
   setTaskFilter: (filter: TaskFilter) => void;
+  setTaskSortMode: (sort: TaskSortMode) => void;
+  toggleCompletedTasksAtBottom: () => void;
+  toggleAutoMoveCompletedProjects: () => void;
   toggleTaskExpanded: (taskId: string) => void;
+  toggleTaskProjectCollapsed: (projectId: string) => void;
+  saveTaskProject: (draft: TaskProjectDraft) => void;
+  deleteTaskProject: (projectId: string) => void;
+  moveTaskProject: (projectId: string, targetProjectId: string, before?: boolean) => void;
+  moveProjectToColumn: (projectId: string, columnId: string) => void;
+  renameTaskBoardColumn: (columnId: string, name: string) => void;
+  addTaskBoardColumn: () => void;
+  removeTaskBoardColumn: (columnId: string) => void;
+  moveTaskToProject: (taskId: string, projectId: string) => void;
   resetApp: () => void;
   replayOnboarding: () => void;
   setOnboardingName: (value: string) => void;
@@ -83,8 +108,8 @@ export interface AppStore extends AppSnapshot {
   saveSubtask: (taskId: string, draft: SubtaskDraft) => void;
   toggleSubtaskDone: (taskId: string, subtaskId: string) => void;
   deleteSubtask: (taskId: string, subtaskId: string) => void;
-  moveSubtask: (taskId: string, subtaskId: string, targetSubtaskId: string) => void;
-  moveTask: (taskId: string, targetTaskId: string) => void;
+  moveSubtask: (taskId: string, subtaskId: string, targetSubtaskId: string, before?: boolean) => void;
+  moveTask: (taskId: string, targetTaskId: string, before?: boolean) => void;
   startRunner: (taskId: string) => void;
   setRunnerStep: (stepIndex: number) => void;
   advanceRunner: (action: RunnerAction) => void;
@@ -105,7 +130,7 @@ export interface AppStore extends AppSnapshot {
   endGuidedTour: () => void;
 }
 
-const snapshot = mockRepository.loadSnapshot();
+const snapshot = mockRepository.loadSignedOutSnapshot();
 
 export const useAppStore = create<AppStore>()(
   persist(
@@ -118,6 +143,7 @@ export const useAppStore = create<AppStore>()(
       budgetView: 'overview',
       taskFilter: 'all',
       expandedTaskIds: [],
+      collapsedTaskProjectIds: [],
       setHasHydrated: (value) => set({ hasHydrated: value }),
       showToast: (toast) =>
         set({
@@ -130,17 +156,169 @@ export const useAppStore = create<AppStore>()(
       setTasksView: (view) => set({ tasksView: view }),
       setBudgetView: (view) => set({ budgetView: view }),
       setTaskFilter: (filter) => set({ taskFilter: filter }),
+      setTaskSortMode: (sort) =>
+        set((state) => ({
+          taskWorkspace: {
+            ...state.taskWorkspace,
+            preferences: { ...state.taskWorkspace.preferences, sort },
+          },
+        })),
+      toggleCompletedTasksAtBottom: () =>
+        set((state) => ({
+          taskWorkspace: {
+            ...state.taskWorkspace,
+            preferences: {
+              ...state.taskWorkspace.preferences,
+              completedAtBottom: !state.taskWorkspace.preferences.completedAtBottom,
+            },
+          },
+        })),
+      toggleAutoMoveCompletedProjects: () =>
+        set((state) => {
+          const taskWorkspace = {
+            ...state.taskWorkspace,
+            preferences: {
+              ...state.taskWorkspace.preferences,
+              autoMoveCompletedProjects:
+                !state.taskWorkspace.preferences.autoMoveCompletedProjects,
+            },
+          };
+          return {
+            taskWorkspace: syncCompletedProjectColumns(taskWorkspace, state.tasks),
+          };
+        }),
       toggleTaskExpanded: (taskId) =>
         set((state) => ({
           expandedTaskIds: state.expandedTaskIds.includes(taskId)
             ? state.expandedTaskIds.filter((id) => id !== taskId)
             : [...state.expandedTaskIds, taskId],
         })),
+      toggleTaskProjectCollapsed: (projectId) =>
+        set((state) => ({
+          collapsedTaskProjectIds: state.collapsedTaskProjectIds.includes(projectId)
+            ? state.collapsedTaskProjectIds.filter((id) => id !== projectId)
+            : [...state.collapsedTaskProjectIds, projectId],
+        })),
+      saveTaskProject: (draft) =>
+        set((state) => {
+          const workspace = normalizeTaskWorkspace(state.taskWorkspace);
+          const existing = workspace.projects.find((project) => project.id === draft.id);
+          const project = {
+            id: draft.id ?? createId('project'),
+            code: draft.code.trim().toUpperCase() || 'PROJECT',
+            name: draft.name.trim() || 'Untitled project',
+            color: draft.color,
+            elo: existing?.elo ?? 1200,
+            columnId:
+              draft.columnId ?? existing?.columnId ?? workspace.columns[1]?.id ?? workspace.columns[0].id,
+            order: existing?.order ?? workspace.projects.length,
+            createdAt: existing?.createdAt ?? Date.now(),
+          };
+          return {
+            taskWorkspace: {
+              ...workspace,
+              projects: existing
+                ? workspace.projects.map((entry) => (entry.id === project.id ? project : entry))
+                : [...workspace.projects, project],
+            },
+          };
+        }),
+      deleteTaskProject: (projectId) =>
+        set((state) => {
+          if (projectId === DEFAULT_TASK_PROJECT_ID) return state;
+          const workspace = normalizeTaskWorkspace(state.taskWorkspace);
+          return {
+            tasks: state.tasks.map((task) =>
+              task.projectId === projectId ? { ...task, projectId: DEFAULT_TASK_PROJECT_ID } : task,
+            ),
+            taskWorkspace: {
+              ...workspace,
+              projects: workspace.projects
+                .filter((project) => project.id !== projectId)
+                .map((project, index) => ({ ...project, order: index })),
+            },
+            collapsedTaskProjectIds: state.collapsedTaskProjectIds.filter((id) => id !== projectId),
+          };
+        }),
+      moveTaskProject: (projectId, targetProjectId, before = true) =>
+        set((state) => {
+          const projects = [...state.taskWorkspace.projects];
+          const from = projects.findIndex((project) => project.id === projectId);
+          if (from < 0 || from === projects.findIndex((project) => project.id === targetProjectId)) return state;
+          const [project] = projects.splice(from, 1);
+          const targetIndex = projects.findIndex((entry) => entry.id === targetProjectId);
+          if (targetIndex < 0) return state;
+          projects.splice(before ? targetIndex : targetIndex + 1, 0, project);
+          return {
+            taskWorkspace: {
+              ...state.taskWorkspace,
+              projects: projects.map((entry, index) => ({ ...entry, order: index })),
+            },
+          };
+        }),
+      moveProjectToColumn: (projectId, columnId) =>
+        set((state) => ({
+          taskWorkspace: {
+            ...state.taskWorkspace,
+            projects: state.taskWorkspace.projects.map((project) =>
+              project.id === projectId ? { ...project, columnId } : project,
+            ),
+          },
+        })),
+      renameTaskBoardColumn: (columnId, name) =>
+        set((state) => ({
+          taskWorkspace: {
+            ...state.taskWorkspace,
+            columns: state.taskWorkspace.columns.map((column) =>
+              column.id === columnId ? { ...column, name: name.trim() || column.name } : column,
+            ),
+          },
+        })),
+      addTaskBoardColumn: () =>
+        set((state) => ({
+          taskWorkspace: {
+            ...state.taskWorkspace,
+            columns: [
+              ...state.taskWorkspace.columns,
+              {
+                id: createId('column'),
+                name: 'New column',
+                order: state.taskWorkspace.columns.length,
+              },
+            ],
+          },
+        })),
+      removeTaskBoardColumn: (columnId) =>
+        set((state) => {
+          const hasProjects = state.taskWorkspace.projects.some(
+            (project) => project.columnId === columnId,
+          );
+          if (hasProjects || state.taskWorkspace.columns.length <= 2) return state;
+          return {
+            taskWorkspace: {
+              ...state.taskWorkspace,
+              columns: state.taskWorkspace.columns
+                .filter((column) => column.id !== columnId)
+                .map((column, index) => ({ ...column, order: index })),
+            },
+          };
+        }),
+      moveTaskToProject: (taskId, projectId) =>
+        set((state) => {
+          const tasks = state.tasks.map((task) =>
+            task.id === taskId ? { ...task, projectId } : task,
+          );
+          return {
+            tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
+          };
+        }),
       resetApp: () =>
         set(() => ({
-          ...mockRepository.loadSnapshot(),
+          ...mockRepository.loadSignedOutSnapshot(),
           toast: null,
           guidedTour: initialGuidedTourState,
+          collapsedTaskProjectIds: [],
         })),
       replayOnboarding: () =>
         set((state) => {
@@ -154,6 +332,7 @@ export const useAppStore = create<AppStore>()(
             arena: base.arena,
             toast: null,
             expandedTaskIds: [],
+            collapsedTaskProjectIds: [],
           };
         }),
       setOnboardingName: (value) =>
@@ -252,7 +431,15 @@ export const useAppStore = create<AppStore>()(
             pairQueue: buildTournamentPairs(seedTasks),
             round: 0,
           };
-          const nextArena = ensureArenaPair('tasks', nextTasks, nextBudget, null, null, 0);
+          const nextArena = ensureArenaPair(
+            'tasks',
+            nextTasks,
+            nextBudget,
+            state.taskWorkspace,
+            null,
+            null,
+            0,
+          );
 
           return {
             tasks: nextTasks,
@@ -295,6 +482,11 @@ export const useAppStore = create<AppStore>()(
               ? state.tasks.find((entry) => entry.id === draft.id)?.subtasks ?? []
               : [],
             detail: draft.detail?.trim() || undefined,
+            dueLabel: draft.dueLabel?.trim() || undefined,
+            projectId:
+              draft.projectId ??
+              state.tasks.find((entry) => entry.id === draft.id)?.projectId ??
+              DEFAULT_TASK_PROJECT_ID,
             createdAt:
               state.tasks.find((entry) => entry.id === draft.id)?.createdAt ?? Date.now(),
             order:
@@ -307,20 +499,23 @@ export const useAppStore = create<AppStore>()(
           return syncArena({
             ...state,
             tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
           });
         }),
       deleteTask: (taskId) =>
-        set((state) =>
-          syncArena({
+        set((state) => {
+          const tasks = state.tasks.filter((task) => task.id !== taskId);
+          return syncArena({
             ...state,
-            tasks: state.tasks.filter((task) => task.id !== taskId),
+            tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
             expandedTaskIds: state.expandedTaskIds.filter((id) => id !== taskId),
             runner:
               state.runner.taskId === taskId
                 ? { taskId: null, stepIndex: 0, completed: false }
                 : state.runner,
-          }),
-        ),
+          });
+        }),
       toggleTaskEssential: (taskId) =>
         set((state) => {
           const nextTasks = state.tasks.map((task) =>
@@ -375,6 +570,7 @@ export const useAppStore = create<AppStore>()(
             ...state,
             user,
             tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
             expandedTaskIds: shouldCollapse
               ? state.expandedTaskIds.filter((id) => id !== taskId)
               : state.expandedTaskIds,
@@ -402,8 +598,8 @@ export const useAppStore = create<AppStore>()(
           }),
         })),
       saveSubtask: (taskId, draft) =>
-        set((state) => ({
-          tasks: state.tasks.map((task) => {
+        set((state) => {
+          const tasks = state.tasks.map((task) => {
             if (task.id !== taskId) return task;
 
             const existing = task.subtasks.find((subtask) => subtask.id === draft.id);
@@ -414,16 +610,22 @@ export const useAppStore = create<AppStore>()(
               why: draft.why?.trim() || '',
               done: existing?.done ?? false,
               order: existing?.order ?? task.subtasks.length,
+              parentId: existing?.parentId ?? null,
             };
 
             return {
               ...task,
+              done: draft.id ? task.done : false,
               subtasks: draft.id
                 ? task.subtasks.map((subtask) => (subtask.id === draft.id ? nextSubtask : subtask))
                 : [...task.subtasks, nextSubtask],
             };
-          }),
-        })),
+          });
+          return {
+            tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
+          };
+        }),
       toggleSubtaskDone: (taskId, subtaskId) =>
         set((state) => {
           let user = state.user;
@@ -433,7 +635,9 @@ export const useAppStore = create<AppStore>()(
             const subtasks = task.subtasks.map((subtask) =>
               subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask,
             );
-            const allDone = subtasks.length > 0 && subtasks.every((subtask) => subtask.done);
+            const nextTask = { ...task, subtasks };
+            const progress = getTaskItemStats(nextTask);
+            const allDone = progress.total > 0 && progress.complete === progress.total;
 
             if (allDone && !task.done) {
               user = {
@@ -458,6 +662,7 @@ export const useAppStore = create<AppStore>()(
             ...state,
             user,
             tasks,
+            taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
           });
         }),
       deleteSubtask: (taskId, subtaskId) =>
@@ -472,18 +677,19 @@ export const useAppStore = create<AppStore>()(
             };
           }),
         })),
-      moveSubtask: (taskId, subtaskId, targetSubtaskId) =>
+      moveSubtask: (taskId, subtaskId, targetSubtaskId, before = true) =>
         set((state) => ({
           tasks: state.tasks.map((task) => {
             if (task.id !== taskId) return task;
 
             const from = task.subtasks.findIndex((subtask) => subtask.id === subtaskId);
             const to = task.subtasks.findIndex((subtask) => subtask.id === targetSubtaskId);
-            if (from < 0 || to < 0 || to >= task.subtasks.length) return task;
+            if (from < 0 || to < 0 || to >= task.subtasks.length || from === to) return task;
 
             const subtasks = [...task.subtasks];
             const [item] = subtasks.splice(from, 1);
-            subtasks.splice(to, 0, item);
+            const targetIndex = subtasks.findIndex((subtask) => subtask.id === targetSubtaskId);
+            subtasks.splice(before ? targetIndex : targetIndex + 1, 0, item);
 
             return {
               ...task,
@@ -491,15 +697,16 @@ export const useAppStore = create<AppStore>()(
             };
           }),
         })),
-      moveTask: (taskId, targetTaskId) =>
+      moveTask: (taskId, targetTaskId, before = true) =>
         set((state) => {
           const from = state.tasks.findIndex((task) => task.id === taskId);
-          const to = state.tasks.findIndex((task) => task.id === targetTaskId);
-          if (from < 0 || to < 0 || from === to) return state;
+          if (from < 0 || from === state.tasks.findIndex((task) => task.id === targetTaskId)) return state;
 
           const tasks = [...state.tasks];
           const [item] = tasks.splice(from, 1);
-          tasks.splice(to, 0, item);
+          const targetIndex = tasks.findIndex((task) => task.id === targetTaskId);
+          if (targetIndex < 0) return state;
+          tasks.splice(before ? targetIndex : targetIndex + 1, 0, item);
 
           return {
             ...state,
@@ -513,7 +720,7 @@ export const useAppStore = create<AppStore>()(
             return state;
           }
 
-          const orderedSubtasks = [...task.subtasks].sort((left, right) => left.order - right.order);
+          const orderedSubtasks = getTaskLeafSubtasks(task);
           const firstOpenIndex = orderedSubtasks.findIndex((subtask) => !subtask.done);
           const nextStepIndex = firstOpenIndex >= 0 ? firstOpenIndex : 0;
           const alreadyRunning =
@@ -537,7 +744,7 @@ export const useAppStore = create<AppStore>()(
           const task = state.tasks.find((entry) => entry.id === state.runner.taskId);
           if (!task) return state;
 
-          const orderedSubtasks = [...task.subtasks].sort((left, right) => left.order - right.order);
+          const orderedSubtasks = getTaskLeafSubtasks(task);
           const nextStepIndex = Math.max(0, Math.min(stepIndex, Math.max(0, orderedSubtasks.length - 1)));
 
           if (state.runner.stepIndex === nextStepIndex && !state.runner.completed) {
@@ -559,7 +766,7 @@ export const useAppStore = create<AppStore>()(
 
           let user = state.user;
           const currentIndex = state.runner.stepIndex;
-          const orderedSubtasks = [...task.subtasks].sort((left, right) => left.order - right.order);
+          const orderedSubtasks = getTaskLeafSubtasks(task);
           const activeSubtaskId = orderedSubtasks[currentIndex]?.id ?? null;
           if (!activeSubtaskId) {
             return {
@@ -575,7 +782,7 @@ export const useAppStore = create<AppStore>()(
           const subtasks = task.subtasks.map((subtask) =>
             subtask.id === activeSubtaskId && action === 'done' ? { ...subtask, done: true } : subtask,
           );
-          const nextOrderedSubtasks = [...subtasks].sort((left, right) => left.order - right.order);
+          const nextOrderedSubtasks = getTaskLeafSubtasks({ ...task, subtasks });
           const allDone = nextOrderedSubtasks.length > 0 && nextOrderedSubtasks.every((subtask) => subtask.done);
           const nextOpenIndex = nextOrderedSubtasks.findIndex((subtask) => !subtask.done);
           const nextIndex = allDone ? currentIndex : nextOpenIndex >= 0 ? nextOpenIndex : currentIndex;
@@ -602,11 +809,12 @@ export const useAppStore = create<AppStore>()(
               ...state,
               user,
               tasks,
+              taskWorkspace: syncCompletedProjectColumns(state.taskWorkspace, tasks),
             }),
             runner: {
               taskId: task.id,
               stepIndex: nextIndex,
-              completed: allDone || currentIndex >= subtasks.length - 1,
+              completed: allDone || currentIndex >= nextOrderedSubtasks.length - 1,
             },
           };
         }),
@@ -750,6 +958,7 @@ export const useAppStore = create<AppStore>()(
             state.arena.mode,
             state.tasks,
             state.budget,
+            state.taskWorkspace,
             state.arena.championId,
             state.arena.challengerId,
             state.arena.rotationIndex,
@@ -764,6 +973,7 @@ export const useAppStore = create<AppStore>()(
               state.arena.mode,
               state.tasks,
               state.budget,
+              state.taskWorkspace,
               championId,
               state.arena.rotationIndex,
             );
@@ -771,6 +981,7 @@ export const useAppStore = create<AppStore>()(
               state.arena.mode,
               state.tasks,
               state.budget,
+              state.taskWorkspace,
               championId,
               null,
               rotationIndex,
@@ -782,6 +993,10 @@ export const useAppStore = create<AppStore>()(
                 ...nextArena,
               },
             };
+          }
+
+          if (swipe === 'essential' && state.arena.mode === 'projects') {
+            return state;
           }
 
           if (swipe === 'essential') {
@@ -796,9 +1011,17 @@ export const useAppStore = create<AppStore>()(
                 state.arena.mode,
                 tasks,
                 state.budget,
+                state.taskWorkspace,
                 championId,
                 null,
-                nextArenaRotation(state.arena.mode, tasks, state.budget, championId, state.arena.rotationIndex),
+                nextArenaRotation(
+                  state.arena.mode,
+                  tasks,
+                  state.budget,
+                  state.taskWorkspace,
+                  championId,
+                  state.arena.rotationIndex,
+                ),
               );
 
               return finalizeCommit({
@@ -837,9 +1060,17 @@ export const useAppStore = create<AppStore>()(
               state.arena.mode,
               state.tasks,
               budget,
+              state.taskWorkspace,
               championId,
               null,
-              nextArenaRotation(state.arena.mode, state.tasks, budget, championId, state.arena.rotationIndex),
+              nextArenaRotation(
+                state.arena.mode,
+                state.tasks,
+                budget,
+                state.taskWorkspace,
+                championId,
+                state.arena.rotationIndex,
+              ),
             );
 
             return finalizeCommit({
@@ -869,6 +1100,7 @@ export const useAppStore = create<AppStore>()(
             state.arena.mode,
             state.tasks,
             state.budget,
+            state.taskWorkspace,
             championId,
             challengerId,
             swipe,
@@ -880,6 +1112,7 @@ export const useAppStore = create<AppStore>()(
             state.arena.mode,
             result.tasks,
             result.budget,
+            result.taskWorkspace,
             result.championId,
             state.arena.rotationIndex,
           );
@@ -887,6 +1120,7 @@ export const useAppStore = create<AppStore>()(
             state.arena.mode,
             result.tasks,
             result.budget,
+            result.taskWorkspace,
             result.championId,
             null,
             rotationIndex,
@@ -896,6 +1130,7 @@ export const useAppStore = create<AppStore>()(
             ...state,
             tasks: result.tasks,
             budget: result.budget,
+            taskWorkspace: result.taskWorkspace,
             user: {
               ...state.user,
               xp: state.user.xp + result.xpDelta,
@@ -971,6 +1206,7 @@ export const useAppStore = create<AppStore>()(
       partialize: (state): PersistedState => ({
         user: state.user,
         tasks: state.tasks,
+        taskWorkspace: state.taskWorkspace,
         budget: state.budget,
         onboarding: state.onboarding,
         arena: state.arena,
@@ -986,10 +1222,12 @@ export const useAppStore = create<AppStore>()(
 
 function syncArena(state: AppStore) {
   const arenaState = normalizeArenaWindow(state.arena);
+  const taskWorkspace = normalizeTaskWorkspace(state.taskWorkspace);
   const nextArena = ensureArenaPair(
     arenaState.mode,
     state.tasks,
     state.budget,
+    taskWorkspace,
     arenaState.championId,
     arenaState.challengerId,
     arenaState.rotationIndex,
@@ -997,6 +1235,7 @@ function syncArena(state: AppStore) {
 
   return {
     ...state,
+    taskWorkspace,
     arena: {
       ...arenaState,
       ...nextArena,

@@ -20,8 +20,7 @@
       "bundleIdentifier": "com.milankinzy.wouldyouiq",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Lets you pick a syllabus photo to import assignments."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -42,8 +41,21 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "expo-secure-store",
-      "expo-apple-authentication"
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "WouldYouIQ uses only the syllabus photo you select to import assignments.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
