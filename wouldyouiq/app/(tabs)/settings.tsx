@@ -191,7 +191,7 @@ export default function SettingsScreen() {
             />
           ) : (
             <Text style={styles.sectionNote}>
-              AI syllabus import is off until you give consent on the Syllabus screen.
+              AI syllabus scanning is off until you give consent in Tasks → Context.
             </Text>
           )}
           <Text style={styles.sectionNote}>Version {appVersion}</Text>

@@ -62,12 +62,12 @@ const SYNC_META_KEY = 'wouldyouiq-sync-meta-v1';
 
 const SyncContext = createContext<SyncContextValue | null>(null);
 
-function getSnapshot(state: ReturnType<typeof useAppStore.getState>): AppSnapshot {
+function getSnapshot(state: ReturnType<typeof useAppStore.getState>, ownerId: string): AppSnapshot {
   return {
     user: state.user,
     tasks: state.tasks,
     taskWorkspace: state.taskWorkspace,
-    syllabi: cloudSyllabi(state.syllabi),
+    syllabi: cloudSyllabi(state.syllabi, ownerId),
     budget: state.budget,
     onboarding: state.onboarding,
     arena: state.arena,
@@ -104,6 +104,7 @@ type CloudProfile = {
 };
 
 export function SyncProvider({ children }: { children: ReactNode }) {
+  const [sessionUser, setSessionUser] = useState<any>(null);
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   const user = useAppStore((state) => state.user);
   const tasks = useAppStore((state) => state.tasks);
@@ -118,17 +119,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       user,
       tasks,
       taskWorkspace,
-      syllabi: cloudSyllabi(syllabi),
+      syllabi: cloudSyllabi(syllabi, sessionUser?.id),
       budget,
       onboarding,
       arena,
       runner,
     }),
-    [arena, budget, onboarding, runner, syllabi, taskWorkspace, tasks, user],
+    [arena, budget, onboarding, runner, sessionUser?.id, syllabi, taskWorkspace, tasks, user],
   );
   const snapshotHash = useMemo(() => JSON.stringify(snapshot), [snapshot]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [sessionUser, setSessionUser] = useState<any>(null);
   const [lastSavedHash, setLastSavedHash] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('local');
   const [isSaving, setIsSaving] = useState(false);
@@ -193,7 +193,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     try {
       setIsSaving(true);
       setSaveState('saving');
-      const freshSnapshot = getSnapshot(useAppStore.getState());
+      const freshSnapshot = getSnapshot(useAppStore.getState(), identity.id);
       const freshHash = JSON.stringify(freshSnapshot);
       await cloudRepository.saveSnapshot(identity.id, freshSnapshot);
       await cloudRepository.saveProfile(identity.id, freshSnapshot);

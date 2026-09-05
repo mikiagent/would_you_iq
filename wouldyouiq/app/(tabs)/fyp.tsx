@@ -314,7 +314,7 @@ export default function ForYouScreen() {
             <Text style={styles.headerTitle}>For You</Text>
             <Pressable
               style={styles.magicButton}
-              onPress={() => router.push('/(tabs)/syllabus')}
+              onPress={() => router.push('/(tabs)/tasks?section=context')}
               accessibilityRole="button"
               accessibilityLabel="Import a syllabus"
             >

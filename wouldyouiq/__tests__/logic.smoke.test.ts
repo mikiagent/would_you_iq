@@ -56,6 +56,7 @@ test('syllabus sync preserves device files without exporting local paths or anot
   assert.equal(merged.find(d=>d.id==='doc-1')?.localUri, document.localUri);
   assert.deepEqual(mergeSyllabi(exported, [document, offline], 'owner-b'), []);
   assert.deepEqual(cloudSyllabi([document], 'owner-b'), []);
+  assert.deepEqual(cloudSyllabi([document], null), []);
   assert.equal(recoverSyllabusScans(merged)[0].extractionStatus, 'error');
   assert.deepEqual(recoverSyllabusScans(undefined), []);
 });

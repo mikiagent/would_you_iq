@@ -2,12 +2,12 @@ import type { SyllabusDocument } from "./models.ts";
 
 export function cloudSyllabi(
   documents: SyllabusDocument[],
-  ownerId?: string | null,
+  ownerId: string | null | undefined,
 ): SyllabusDocument[] {
   return documents
     .filter(
       (document) =>
-        !!document.remotePath && (!ownerId || document.ownerId === ownerId),
+        !!document.remotePath && !!ownerId && document.ownerId === ownerId,
     )
     .map((document) => ({
       ...document,

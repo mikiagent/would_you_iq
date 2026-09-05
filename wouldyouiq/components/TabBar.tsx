@@ -18,7 +18,11 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         const { options } = descriptors[route.key];
-        if ((options as { href?: string | null }).href === null) {
+        // Expo Router consumes href: null and exposes display: none instead.
+        if (
+          (options as { href?: string | null }).href === null ||
+          StyleSheet.flatten(options.tabBarItemStyle)?.display === 'none'
+        ) {
           return null;
         }
         const label =
