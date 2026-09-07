@@ -54,6 +54,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.fullScreen}>
       <AppShell>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ animation: 'fade' }} />
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="runner" />

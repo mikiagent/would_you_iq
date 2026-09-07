@@ -24,6 +24,31 @@ import { pickTaskDropTarget } from '../domain/taskDrag.ts';
 import { cloudSyllabi, mergeSyllabi, recoverSyllabusScans } from '../domain/syllabusDocuments.ts';
 import { decodeBase64, encodeBase64, validateSource, safeSyllabusFilename, MAX_SYLLABUS_FILE_BYTES } from '../lib/syllabusFiles.ts';
 import type { SyllabusDocument } from '../domain/models.ts';
+import { landingDestination } from '../domain/navigation.ts';
+import { focusedInputScrollOffset, keyboardViewport } from '../domain/keyboard.ts';
+
+test('keyboard scrolling reveals covered fields without losing the current scroll position', () => {
+  const frame = { scrollOffset: 100, viewportTop: 150, viewportHeight: 300, inputTop: 430, inputHeight: 44 };
+  assert.equal(focusedInputScrollOffset(frame), 136);
+  assert.equal(focusedInputScrollOffset({ ...frame, inputTop: 300 }), 100);
+  assert.equal(focusedInputScrollOffset({ ...frame, inputTop: 140 }), 78);
+  assert.equal(focusedInputScrollOffset({ ...frame, scrollOffset: 0, inputTop: 0 }), 0);
+  assert.equal(focusedInputScrollOffset({ ...frame, inputTop: 190, inputHeight: 500 }), 128);
+});
+
+test('mobile web keyboard viewport ignores pinch zoom and browser chrome', () => {
+  const frame = { layoutHeight: 844, visualHeight: 506, offsetTop: 0, scale: 1, editableFocused: true };
+  assert.deepEqual(keyboardViewport(frame), { visible: true, height: 506, top: 0 });
+  assert.equal(keyboardViewport({ ...frame, scale: 2 }).visible, false);
+  assert.equal(keyboardViewport({ ...frame, editableFocused: false }).visible, false);
+  assert.equal(keyboardViewport({ ...frame, visualHeight: 780 }).visible, false);
+  assert.equal(keyboardViewport({ ...frame, offsetTop: 30 }).top, 30);
+});
+
+test('landing continues to onboarding for new users and comparisons for returning users', () => {
+  assert.equal(landingDestination(false), '/onboarding');
+  assert.equal(landingDestination(true), '/(tabs)/calibrate');
+});
 
 test('syllabus bytes round trip and file limits measure actual UTF-8 and binary sizes', () => {
   const bytes = Uint8Array.from([0, 255, 37, 80, 68, 70, 13, 10, 128]);

@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { useCloudSync } from "@/components/SyncProvider";
+import { renderKeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { ActionButton, Badge, Sheet, Surface } from "@/components/primitives";
 import { Links } from "@/constants/links";
 import { Colors, Fonts } from "@/constants/tokens";
@@ -697,6 +698,7 @@ export function SyllabusContextPanel() {
           <Text style={styles.orLabel}>or paste the schedule</Text>
           <TextInput
             multiline
+            accessibilityLabel="Syllabus schedule"
             editable={!busy}
             value={pastedText}
             onChangeText={(value) => {
@@ -731,6 +733,7 @@ export function SyllabusContextPanel() {
   return (
     <View style={styles.root}>
       <FlatList
+        renderScrollComponent={renderKeyboardAwareScrollView}
         data={syllabi}
         renderItem={renderDocument}
         keyExtractor={(item) => item.id}

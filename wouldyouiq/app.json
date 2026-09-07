@@ -11,9 +11,9 @@
     "scheme": "wouldyouiq",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/icon-wouldyouiq-v5.png",
       "resizeMode": "contain",
-      "backgroundColor": "#07070d"
+      "backgroundColor": "#06070e"
     },
     "ios": {
       "supportsTablet": false,
@@ -24,6 +24,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#07070d",
         "foregroundImage": "./assets/images/icon-wouldyouiq-v5.png"
@@ -38,6 +39,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon-wouldyouiq-v5.png",
+          "imageWidth": 172,
+          "resizeMode": "contain",
+          "backgroundColor": "#06070e"
+        }
+      ],
       "expo-web-browser",
       [
         "expo-secure-store",

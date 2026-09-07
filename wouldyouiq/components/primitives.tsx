@@ -1,9 +1,10 @@
 import React, { ReactNode } from 'react';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +18,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCloudSync } from '@/components/SyncProvider';
 import { isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts, Spacing } from '@/constants/tokens';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
+import { useKeyboardLayout } from '@/lib/useKeyboardLayout';
 
 export function PageHeader({
   title,
@@ -206,24 +209,35 @@ export function Sheet({
 }) {
   const { width } = useWindowDimensions();
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
+  const keyboard = useKeyboardLayout(open);
+  const close = () => { Keyboard.dismiss(); onClose(); };
 
   return (
-    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.sheetBackdrop, desktop && styles.sheetBackdropDesktop]}>
+    <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'height' : undefined} style={[styles.sheetBackdrop, desktop && styles.sheetBackdropDesktop, keyboard.frameStyle]}>
         <Pressable
           style={StyleSheet.absoluteFill}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
+          onPress={close}
+          accessible={false}
         />
         <View style={[styles.sheet, desktop && styles.sheetDesktop]}>
           <View style={[styles.sheetHandle, desktop && styles.sheetHandleDesktop]} />
-          <Text style={styles.sheetTitle}>{title}</Text>
-          <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            {keyboard.visible && (
+              <Pressable onPress={Keyboard.dismiss} accessibilityRole="button" accessibilityLabel="Done typing" style={styles.sheetHeaderButton}>
+                <Text style={styles.sheetHeaderButtonLabel}>Done</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={`Close ${title}`} style={styles.sheetHeaderButton}>
+              <Text style={styles.sheetHeaderButtonLabel}>✕</Text>
+            </Pressable>
+          </View>
+          <KeyboardAwareScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetContent}>
             {children}
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -549,14 +563,33 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 12,
   },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20,
+    paddingRight: 10,
+    marginBottom: 8,
+    gap: 4,
+  },
   sheetTitle: {
+    flex: 1,
     fontFamily: Fonts.display,
     fontSize: 16,
     color: Colors.t1,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+  },
+  sheetHeaderButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetHeaderButtonLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.violet,
   },
   sheetScroll: {
+    flexShrink: 1,
     maxHeight: '100%',
   },
   sheetContent: {

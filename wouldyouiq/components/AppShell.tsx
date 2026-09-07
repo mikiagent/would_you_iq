@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -20,6 +21,7 @@ import { Colors, Fonts } from '@/constants/tokens';
 import { isDesktopWidth, Layout } from '@/constants/layout';
 import { useAppStore } from '@/domain/store';
 import { getLevelInfo, todayKey } from '@/domain/logic';
+import { useKeyboardLayout } from '@/lib/useKeyboardLayout';
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -30,6 +32,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function AppShellInner({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isLanding = pathname === '/';
+  const keyboard = useKeyboardLayout();
   const { width } = useWindowDimensions();
   const toast = useAppStore((state) => state.toast);
   const clearToast = useAppStore((state) => state.clearToast);
@@ -39,7 +44,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
   useEffect(() => {
-    if (didNotifyRef.current) return;
+    if (isLanding || didNotifyRef.current) return;
     if (user.lastCalibrationDate === todayKey()) return;
 
     didNotifyRef.current = true;
@@ -48,18 +53,22 @@ function AppShellInner({ children }: { children: ReactNode }) {
       title: `Your ${user.streak}-day streak is ready`,
       subtitle: 'Complete today’s calibration to keep it alive.',
     });
-  }, [showToast, user.lastCalibrationDate, user.streak]);
+  }, [isLanding, showToast, user.lastCalibrationDate, user.streak]);
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView style={[styles.root, keyboard.frameStyle]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar style="light" />
       <AmbientBackground />
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={isLanding ? [] : keyboard.visible ? ['top'] : ['top', 'bottom']}>
         {desktop ? <DesktopShell>{children}</DesktopShell> : <View style={styles.app}>{children}</View>}
       </SafeAreaView>
-      <GuidedTour />
-      <Toast toast={toast} onDone={clearToast} />
-    </View>
+      {!isLanding && (
+        <>
+          <GuidedTour />
+          <Toast toast={toast} onDone={clearToast} />
+        </>
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
@@ -72,8 +81,8 @@ function DesktopShell({ children }: { children: ReactNode }) {
   const user = useAppStore((state) => state.user);
   const { avatarUrl, displayName, email, isSignedIn } = useCloudSync();
   const storedUser = user;
-  const showTabsChrome = pathname !== '/onboarding' && pathname !== '/runner';
-  const onboardingRoute = pathname === '/onboarding';
+  const showTabsChrome = pathname !== '/' && pathname !== '/onboarding' && pathname !== '/runner';
+  const onboardingRoute = pathname === '/' || pathname === '/onboarding';
   const resolvedAvatarUrl = avatarUrl ?? storedUser.avatarUrl;
   const resolvedName = displayName ?? storedUser.name;
   const resolvedEmail = email ?? storedUser.email;
@@ -100,7 +109,7 @@ function DesktopShell({ children }: { children: ReactNode }) {
 
   if (!showTabsChrome) {
     return (
-      <View style={styles.desktopStandalone}>
+      <View style={[styles.desktopStandalone, pathname === '/' && styles.desktopLanding]}>
         <View
           style={[
             styles.desktopStandaloneContent,
@@ -481,6 +490,9 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: 760,
+  },
+  desktopLanding: {
+    paddingHorizontal: 0,
   },
   desktopStandaloneContentFullBleed: {
     maxWidth: '100%',

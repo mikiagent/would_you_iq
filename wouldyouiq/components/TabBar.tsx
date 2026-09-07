@@ -4,12 +4,14 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 
 import { Layout, isDesktopWidth } from '@/constants/layout';
 import { Colors, Fonts } from '@/constants/tokens';
+import { useKeyboardLayout } from '@/lib/useKeyboardLayout';
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const keyboard = useKeyboardLayout();
   const { width } = useWindowDimensions();
   const desktop = Platform.OS === 'web' && isDesktopWidth(width);
 
-  if (desktop) {
+  if (desktop || keyboard.visible) {
     return null;
   }
 
