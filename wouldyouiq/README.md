@@ -11,12 +11,12 @@ Local-first priority calibration app: rank tasks through quick pairwise "Would Y
 
 ## Features
 
-- Tasks tab (list with filters)
+- Tasks tab (list, board, task/project ELO, and syllabus context)
 - Would You? calibration tab (pairwise chooser that reorders priorities)
 - For You tab (top-priority card, quick Done, focus runner)
 - Budget tab (income, leftover, item alignment)
-- Syllabus tab (AI import: PDF/photo/text → assignments → tasks, consent-gated)
 - Settings tab (profile, sign-in, privacy links, account deletion, reset)
+- Optional syllabus storage and consent-gated AI scanning for reviewable assignments and due dates; extracted items are not automatically converted into tasks
 
 ## Running
 

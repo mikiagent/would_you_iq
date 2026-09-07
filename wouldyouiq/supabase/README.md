@@ -24,8 +24,19 @@ supabase functions deploy delete-account
 supabase secrets set OPENROUTER_API_KEY=<server-side key, never EXPO_PUBLIC_*>
 ```
 
+Apple-linked account deletion also needs a Sign in with Apple key. Add these
+Edge Function secrets, keeping the `.p8` private key out of the repository and
+client build:
+
+```sh
+supabase secrets set APPLE_CLIENT_ID=com.milankinzy.wouldyouiq
+supabase secrets set APPLE_TEAM_ID=<Apple Developer team ID>
+supabase secrets set APPLE_KEY_ID=<Sign in with Apple key ID>
+supabase secrets set APPLE_PRIVATE_KEY=<contents of the .p8 key>
+```
+
 - **`syllabus-extract`** — authenticated AI proxy for syllabus import. Verifies the caller's JWT, rate-limits to 20 requests/user/day via `ai_usage`, and forwards PDF/image/text content to OpenRouter (`anthropic/claude-haiku-4.5`) with zero-data-retention routing (`provider.zdr: true`). Also enable Zero Data Retention in the OpenRouter dashboard. `GET` returns `{ "ok": true }` for smoke tests.
-- **`delete-account`** — deletes the calling user's auth account with the service role. All user tables cascade from `auth.users`, so profile, snapshot, tasks, budget, and AI-usage rows are removed with it. Required for App Review Guideline 5.1.1(v).
+- **`delete-account`** — for Apple-linked accounts, exchanges a fresh native authorization code and revokes the Apple token; then deletes private syllabus files and the calling user's auth account. All user tables cascade from `auth.users`, so profile, snapshot, tasks, budget, and AI-usage rows are removed with it. Required for App Review Guideline 5.1.1(v).
 
 ## Auth providers
 

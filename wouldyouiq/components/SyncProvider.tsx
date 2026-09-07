@@ -97,6 +97,11 @@ function getUserIdentity(sessionUser: any) {
   };
 }
 
+function getAppleIdentityId(sessionUser: any): string | null {
+  const identity = sessionUser?.identities?.find((item: any) => item?.provider === 'apple');
+  return identity?.identity_data?.sub ?? identity?.provider_id ?? identity?.id ?? null;
+}
+
 type CloudProfile = {
   name: string | null;
   avatarUrl: string | null;
@@ -513,14 +518,41 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
+    const appleIdentityId = getAppleIdentityId(sessionUser);
+    let appleAuthorizationCode: string | null = null;
+
+    if (appleIdentityId) {
+      if (Platform.OS !== 'ios') {
+        throw new Error('Delete this Apple-linked account from the WouldYouIQ iPhone app.');
+      }
+
+      let credential: AppleAuthentication.AppleAuthenticationCredential;
+      try {
+        credential = await AppleAuthentication.refreshAsync({ user: appleIdentityId });
+      } catch (err: any) {
+        if (err?.code === 'ERR_REQUEST_CANCELED') {
+          throw new Error('Apple confirmation is required to delete this account.');
+        }
+        throw new Error('Apple could not confirm this account. Try again.');
+      }
+
+      if (!credential.authorizationCode) {
+        throw new Error('Apple did not return the authorization needed to delete this account.');
+      }
+      appleAuthorizationCode = credential.authorizationCode;
+    }
+
+    const { error } = await supabase.functions.invoke('delete-account', {
+      method: 'POST',
+      body: { appleAuthorizationCode },
+    });
     if (error) {
       throw new Error('Account deletion failed. Check your connection and try again.');
     }
 
     if (identity.id) await clearLocalSyllabusFiles(identity.id).catch(() => undefined);
     await signOut();
-  }, [identity.id, signOut]);
+  }, [identity.id, sessionUser, signOut]);
 
   const value = useMemo<SyncContextValue>(
     () => ({

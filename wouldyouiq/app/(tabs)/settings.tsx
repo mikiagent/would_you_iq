@@ -82,7 +82,7 @@ export default function SettingsScreen() {
       () => {
         confirmDestructive(
           'Are you sure?',
-          'Your account and synced app content will be permanently deleted. If you used Sign in with Apple, also remove WouldYouIQ from your Sign in with Apple settings to revoke the remaining Apple authorization.',
+          'Your account and synced app content will be permanently deleted. If this account uses Sign in with Apple, Apple will ask you to confirm so WouldYouIQ can revoke its authorization.',
           'Delete forever',
           () => {
             setIsDeletingAccount(true);
