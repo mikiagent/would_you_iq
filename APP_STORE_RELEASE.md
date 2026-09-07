@@ -1,6 +1,6 @@
 # App Store release audit
 
-- App and version: WouldYouIQ 1.0.0; signed build 7 uploaded to App Store Connect and awaiting Apple processing
+- App and version: WouldYouIQ 1.0.0; App Store Connect build 7 is processed and valid
 - EAS build ID: `cd160fe6-4960-4afb-8046-cf3571a6699c`
 - EAS submission ID: `2794ca05-9bda-4df7-bf31-f1dd0a0f0b45`
 - Platforms and device families: iOS, iPhone only
@@ -12,7 +12,7 @@
 
 ## Blockers
 
-1. Build 7 is uploaded but must finish Apple processing and pass a clean TestFlight test on a physical iPhone.
+1. Build 7 must pass a clean TestFlight test on a physical iPhone.
 2. The deployed `delete-account` Edge Function must be exercised end to end with a disposable Apple-linked test account.
 3. App Store Connect has no screenshots, selected store build, description, keywords, support URL, copyright, category, privacy answers, age rating, starting price, or storefront availability.
 4. The App Store name is currently `WouldYouIQ (d80381)`, which does not match the product name. Rename it to `WouldYouIQ` if Apple accepts the name, or choose a deliberate public name.
@@ -28,7 +28,7 @@
 
 ## Human actions required
 
-1. After Apple processing completes, test build 7 from TestFlight on a physical iPhone, including deletion of a disposable Apple-linked account.
+1. Test build 7 from TestFlight on a physical iPhone, including deletion of a disposable Apple-linked account.
 2. Confirm the public app name, storefronts, free pricing, automatic-versus-manual release, content-rights answer, and DSA trader status.
 3. Complete and publish App Privacy and the age-rating questionnaire, using the answer sheet below.
 4. Supply an App Review phone number. Keep personal credentials out of this file.
@@ -53,7 +53,7 @@
 - App icon: 1024 × 1024 with no alpha channel.
 - Signed store artifact build 7: valid distribution signature, bundle ID `com.milankinzy.wouldyouiq`, version 1.0.0 (7), iPhone-only, minimum iOS 15.1, Xcode 26/iOS 26 SDK, Sign in with Apple entitlement, complete first-party privacy manifest, no icon alpha, and `ITSAppUsesNonExemptEncryption=false`.
 - Supabase `delete-account` version 4: active with JWT verification; all four Apple server secrets are configured and the unauthenticated boundary returns HTTP 401.
-- App Store Connect delivery: EAS submission `2794ca05-9bda-4df7-bf31-f1dd0a0f0b45` completed successfully; Apple processing remains pending.
+- App Store Connect delivery: EAS submission `2794ca05-9bda-4df7-bf31-f1dd0a0f0b45` completed successfully; Apple build ID `66d13615-9b37-493b-b7af-8eacd7d39073` reports `VALID`.
 - App Store Connect: build 6 is processed and selectable; TestFlight shows `Ready to Submit` with one invitation.
 - Clean simulator launch on iOS 26.4: landing, onboarding, sample-data setup, Tasks, Would You, For You, Budget, and Task ELO render correctly.
 - Public privacy, privacy choices, and support pages return HTTP 200.
@@ -65,7 +65,7 @@
 | --- | --- | --- | --- | --- | --- |
 | A1 | Correct signed identity | PASS | Build 7: `com.milankinzy.wouldyouiq`, version 1.0.0 (7), distribution-signed | None | Engineering |
 | A2 | Current SDK requirement | PASS | Build 7 uses Xcode 26 and iOS 26 SDK; Apple requires Xcode 26/iOS 26 SDK since Apr 28, 2026 | None | Engineering |
-| A3 | Store metadata and build selection | FAIL | Build 7 is delivered and processing, but version 1.0 fields are empty and no store build is selected | Enter the answer sheet, upload screenshots, select build 7 after processing | Owner |
+| A3 | Store metadata and build selection | FAIL | Build 7 is processed and valid, but version 1.0 fields are empty and no store build is selected | Enter the answer sheet, upload screenshots, and select build 7 | Owner |
 | A4 | Accurate screenshots | PASS | Five current 1320 × 2868 JPEGs, no alpha, show the five-tab design | Upload to the 6.9-inch slot in Media Manager | Owner |
 | A5 | App privacy answers | FAIL | App Privacy shows no policy URL and `Get Started` | Complete and publish the declarations below | Owner |
 | A6 | Privacy manifest | PASS | Build 7 embeds seven linked, non-tracking data declarations plus required-reason API declarations | None | Engineering |
