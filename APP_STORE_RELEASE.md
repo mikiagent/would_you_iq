@@ -1,6 +1,7 @@
 # App Store release audit
 
-- App and version: WouldYouIQ 1.0.0; current TestFlight build 6
+- App and version: WouldYouIQ 1.0.0; signed candidate build 7; current TestFlight build 6
+- EAS build ID: `cd160fe6-4960-4afb-8046-cf3571a6699c`
 - Platforms and device families: iOS, iPhone only
 - Distribution channel: Public App Store; TestFlight for the release candidate
 - Intended storefronts: Owner decision; App Store availability is not configured yet
@@ -10,7 +11,7 @@
 
 ## Blockers
 
-1. Build 6 predates the Sign in with Apple deletion-revocation fix and complete first-party privacy manifest. Build 7 is required.
+1. Signed build 7 contains the Sign in with Apple deletion-revocation client and complete first-party privacy manifest, but must not be uploaded until the matching server function is configured and deployed.
 2. The `delete-account` Edge Function needs `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY`, then must be deployed and exercised with an Apple-linked test account.
 3. App Store Connect has no screenshots, selected store build, description, keywords, support URL, copyright, category, privacy answers, age rating, starting price, or storefront availability.
 4. The App Store name is currently `WouldYouIQ (d80381)`, which does not match the product name. Rename it to `WouldYouIQ` if Apple accepts the name, or choose a deliberate public name.
@@ -28,7 +29,7 @@
 
 1. In Apple Developer, create a Sign in with Apple key for `com.milankinzy.wouldyouiq`. Store the key securely; never commit the `.p8` file.
 2. Set the four Apple secrets in Supabase, deploy `delete-account`, and test deletion end to end with a disposable Apple-linked account.
-3. Build and upload build 7, then test it from TestFlight on a physical iPhone.
+3. After the server function is ready, upload build 7 and test it from TestFlight on a physical iPhone.
 4. Confirm the public app name, storefronts, free pricing, automatic-versus-manual release, content-rights answer, and DSA trader status.
 5. Complete and publish App Privacy and the age-rating questionnaire, using the answer sheet below.
 6. Supply an App Review phone number. Keep personal credentials out of this file.
@@ -51,7 +52,7 @@
 - Deno type-check: both Edge Functions pass.
 - Generated iOS privacy manifest: valid plist with seven collected-data categories and no tracking.
 - App icon: 1024 × 1024 with no alpha channel.
-- Signed store artifact build 6: valid distribution signature, bundle ID `com.milankinzy.wouldyouiq`, version 1.0.0 (6), iPhone-only, minimum iOS 15.1, Sign in with Apple entitlement, no arbitrary network loads, and `ITSAppUsesNonExemptEncryption=false`.
+- Signed store artifact build 7: valid distribution signature, bundle ID `com.milankinzy.wouldyouiq`, version 1.0.0 (7), iPhone-only, minimum iOS 15.1, Xcode 26/iOS 26 SDK, Sign in with Apple entitlement, complete first-party privacy manifest, no icon alpha, and `ITSAppUsesNonExemptEncryption=false`.
 - App Store Connect: build 6 is processed and selectable; TestFlight shows `Ready to Submit` with one invitation.
 - Clean simulator launch on iOS 26.4: landing, onboarding, sample-data setup, Tasks, Would You, For You, Budget, and Task ELO render correctly.
 - Public privacy, privacy choices, and support pages return HTTP 200.
@@ -61,12 +62,12 @@
 
 | ID | Requirement | Status | Evidence | Fix or next action | Owner |
 | --- | --- | --- | --- | --- | --- |
-| A1 | Correct signed identity | PASS | Build 6: `com.milankinzy.wouldyouiq`, version 1.0.0 (6), distribution-signed | Recheck build 7 after upload | Engineering |
-| A2 | Current SDK requirement | PASS | Build 6 uses Xcode 26 and iOS 26 SDK; Apple requires Xcode 26/iOS 26 SDK since Apr 28, 2026 | None | Engineering |
+| A1 | Correct signed identity | PASS | Build 7: `com.milankinzy.wouldyouiq`, version 1.0.0 (7), distribution-signed | None | Engineering |
+| A2 | Current SDK requirement | PASS | Build 7 uses Xcode 26 and iOS 26 SDK; Apple requires Xcode 26/iOS 26 SDK since Apr 28, 2026 | None | Engineering |
 | A3 | Store metadata and build selection | FAIL | App Store Connect version 1.0 fields are empty and no build is selected | Enter the answer sheet, upload screenshots, select build 7 | Owner |
 | A4 | Accurate screenshots | PASS | Five current 1320 × 2868 JPEGs, no alpha, show the five-tab design | Upload to the 6.9-inch slot in Media Manager | Owner |
 | A5 | App privacy answers | FAIL | App Privacy shows no policy URL and `Get Started` | Complete and publish the declarations below | Owner |
-| A6 | Privacy manifest | PASS | `app.json` generates seven linked, non-tracking data declarations; prebuild plist validates | Verify the same manifest inside build 7 | Engineering |
+| A6 | Privacy manifest | PASS | Build 7 embeds seven linked, non-tracking data declarations plus required-reason API declarations | None | Engineering |
 | A7 | Account deletion | FAIL | New revocation code exists locally; production function v2 lacks the change and Apple secrets are absent | Configure, deploy, and test with an Apple-linked account | Engineering + owner |
 | A8 | Review access | NEEDS HUMAN ACTION | Core app works signed out; cloud/AI requires Apple or Google sign-in | Uncheck “Sign-in required”; explain optional sign-in in review notes | Owner |
 | A9 | Privacy/support URLs | PASS | Live policy, privacy choices, and support pages return 200 and are available inside Settings | Add URLs to App Store Connect | Owner |
